@@ -1,0 +1,478 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>내 식물 관리</title>
+<meta name="description" content="내 식물들의 물주기, 비료, 기록을 한곳에서 관리하는 앱">
+<meta name="theme-color" content="#e6eee8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0f1713" media="(prefers-color-scheme: dark)">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="내 식물">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap" crossorigin="anonymous">
+<style>
+/* 한 손으로 쓰는 세로 목록: 위 요약 칩, 아래 탭, 아래에서 올라오는 시트 */
+:root{--bg:#e6eee8;--sf:#f8fbf8;--ink:#14261c;--mu:#5a6f62;--ac:#1f7a4d;--acs:#d3e6d9;--onac:#fff;--wa:#1f6fa8;--was:#d6e8f4;--fe:#9a6a12;--fes:#f3e5c4;--rd:#b83a28;--rds:#f6d9d2;--ln:#d2ded5;--gr:#e9eee9;--font:'Gowun Dodum','Apple SD Gothic Neo','Noto Sans KR',system-ui,sans-serif;--gut-l:max(16px,env(safe-area-inset-left,0px));--gut-r:max(16px,env(safe-area-inset-right,0px));color-scheme:light}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1713;--sf:#17221b;--ink:#e6efe8;--mu:#8fa497;--ac:#6fc596;--acs:#223629;--onac:#0b1a11;--wa:#7fbdf0;--was:#1b2f40;--fe:#e2b565;--fes:#38301a;--rd:#ee8a76;--rds:#3d2420;--ln:#25332a;--gr:#1d2a22;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0f1713;--sf:#17221b;--ink:#e6efe8;--mu:#8fa497;--ac:#6fc596;--acs:#223629;--onac:#0b1a11;--wa:#7fbdf0;--was:#1b2f40;--fe:#e2b565;--fes:#38301a;--rd:#ee8a76;--rds:#3d2420;--ln:#25332a;--gr:#1d2a22;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--font);-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);padding-block:14px 8px;padding-left:var(--gut-l);padding-right:var(--gut-r)}
+.wrap{max-width:640px;margin:0 auto}
+.hd{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+h1{margin:0;font-size:26px;font-weight:400}
+#date{color:var(--mu);font-size:13px}
+.pv{margin:6px 0 0;font-size:12px;color:var(--fe);background:var(--fes);border-radius:999px;padding:3px 10px;display:inline-block}
+.pv[hidden]{display:none}
+#sum{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap}
+#sum:empty{display:none}
+.st{border:0;font:inherit;font-size:12px;padding:6px 11px;border-radius:999px;background:var(--acs);color:var(--ac);cursor:pointer}
+.st.w{background:var(--was);color:var(--wa)}.st.f{background:var(--fes);color:var(--fe)}.st.u{background:var(--gr);color:var(--mu)}
+.st.on{background:var(--ac);color:var(--onac)}.st.w.on{background:var(--wa);color:var(--onac)}.st.f.on{background:var(--fe);color:var(--onac)}.st.u.on{background:var(--mu);color:var(--bg)}
+main{padding-block:4px 120px;padding-left:var(--gut-l);padding-right:var(--gut-r)}
+section{background:var(--sf);border:1px solid var(--ln);border-radius:20px;margin:14px 0;overflow:hidden}
+section h2{display:flex;align-items:center;gap:8px;margin:0;padding:14px 16px 10px;font-size:20px;font-weight:400;color:var(--ac)}
+section h2 i{font-style:normal;font-size:12px;background:var(--acs);border-radius:999px;padding:1px 9px}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-top:1px solid var(--ln);cursor:pointer}
+.nm{min-width:0}.nm b{font-weight:400;font-size:16px;display:block}.nm small{color:var(--mu);font-size:12px;display:block}
+.act{display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;justify-content:flex-end}
+.b{border:0;border-radius:999px;padding:9px 13px;font:inherit;font-size:13px;cursor:pointer;background:var(--acs);color:var(--ac)}
+.b.w{background:var(--was);color:var(--wa)}.b.f{background:var(--fes);color:var(--fe)}
+.b.big{width:100%;padding:12px;font-size:15px;border-radius:14px}
+.b.sv{background:var(--ac);color:var(--onac)}.b.dl{background:var(--rds);color:var(--rd)}
+.pill{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--acs);color:var(--ac);white-space:nowrap}
+.pill.od{background:var(--rds);color:var(--rd)}.pill.td{background:var(--was);color:var(--wa)}.pill.sn{background:var(--fes);color:var(--fe)}.pill.un{background:var(--gr);color:var(--mu)}
+.chips{display:flex;gap:6px;overflow-x:auto;padding:4px 0 2px;scrollbar-width:none}
+.chips+.chips{margin-top:2px}
+.ch{flex-shrink:0;border:1px solid var(--ln);background:var(--sf);color:var(--ink);border-radius:999px;padding:7px 12px;font:inherit;font-size:13px;cursor:pointer}
+.ch.on{background:var(--ac);color:var(--onac);border-color:var(--ac)}
+.ch.sm{padding:5px 10px;font-size:12px;color:var(--mu)}.ch.sm.on{color:var(--onac)}
+input,select,textarea{width:100%;font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--ln);border-radius:12px;background:var(--bg);color:var(--ink);margin-top:4px}
+textarea{resize:vertical;line-height:1.5}
+#q{background:var(--sf);margin:8px 0 6px}
+label{display:block;font-size:12px;color:var(--mu);margin-top:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.g2>*{min-width:0}
+.empty{text-align:center;color:var(--mu);padding:56px 12px;line-height:2}
+.empty .b{margin-top:10px}
+.flat>:first-child{border-top:0}
+.l1{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.l1 b{font-weight:400;font-size:16px}
+.tg{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--acs);color:var(--ac);white-space:nowrap}
+.tg.gone{background:var(--gr);color:var(--mu)}.tg.given{background:var(--was);color:var(--wa)}.tg.check{background:var(--fes);color:var(--fe)}
+.uh{margin:26px 4px 8px;font-size:17px;font-weight:400}
+.dh{padding:7px 16px;font-size:12px;color:var(--mu);background:var(--bg);border-top:1px solid var(--ln)}
+.ok{text-align:center;background:var(--sf);border:1px solid var(--ln);border-radius:20px;margin:14px 0;padding:30px 16px}
+.ok span{display:block;font-size:40px;line-height:1.2}.ok b{display:block;font-weight:400;font-size:17px;color:var(--ac);margin-top:6px}.ok small{color:var(--mu);font-size:13px;display:block;margin-top:6px;line-height:1.6}
+.ok .stack{display:grid;gap:8px;margin:20px auto 0;max-width:320px}
+.mc{display:flex;justify-content:space-between;align-items:center;width:100%;margin:22px 0 0;padding:16px;border:1px dashed var(--ln);border-radius:20px;background:none;color:var(--ink);font:inherit;cursor:pointer;text-align:left}
+.mc b{font-weight:400;font-size:16px}.mc small{color:var(--mu);font-size:12px;display:block}
+.vh{display:flex;align-items:baseline;gap:10px;margin:8px 4px 0;flex-wrap:wrap}
+.vh h2{margin:0;font-size:22px;font-weight:400}
+.vh p{margin:0;color:var(--mu);font-size:13px}
+.back{border:0;background:none;color:var(--ac);font:inherit;font-size:14px;padding:4px 0;cursor:pointer}
+.set{padding:4px 16px 16px}
+.set h3{margin:14px 0 4px;font-size:17px;font-weight:400;color:var(--ac)}
+.set p{margin:6px 0;font-size:14px}
+.set .stack{display:grid;gap:8px;margin-top:12px}
+.mu{color:var(--mu)}
+.ver{margin:18px 0 4px;text-align:center;font-size:12px;color:var(--mu)}
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;gap:6px;justify-content:center;background:var(--sf);border-top:1px solid var(--ln);padding-block:8px calc(8px + env(safe-area-inset-bottom,0px));padding-left:var(--gut-l);padding-right:var(--gut-r)}
+.nav button{flex:1;max-width:160px;border:0;border-radius:14px;background:none;color:var(--mu);font:inherit;font-size:14px;padding:10px 0;cursor:pointer}
+.nav .on{background:var(--acs);color:var(--ac)}.nav .add{background:var(--ac);color:var(--onac)}
+#ov{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30}
+#sh{position:absolute;left:0;right:0;bottom:0;max-width:640px;margin:0 auto;background:var(--sf);border-radius:22px 22px 0 0;padding-block:16px calc(18px + env(safe-area-inset-bottom,0px));padding-left:max(18px,env(safe-area-inset-left,0px));padding-right:max(18px,env(safe-area-inset-right,0px));max-height:92%;overflow-y:auto;overscroll-behavior:contain}
+.shh{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.shh h3{margin:0;font-size:21px;font-weight:400;text-wrap:balance}
+.x{border:0;background:var(--gr);color:var(--mu);border-radius:999px;width:34px;height:34px;font-size:20px;line-height:1;cursor:pointer;flex-shrink:0}
+.sci{margin:2px 0 0;color:var(--mu);font-size:13px;font-style:italic}
+.qa{margin-top:12px}
+.grp{border:1px solid var(--ln);border-radius:16px;padding:4px 14px 14px;margin:14px 0 0}
+.grp>legend,.grp>summary{font-size:14px;color:var(--ac);padding:8px 2px 2px}
+.grp>summary{cursor:pointer;list-style-position:inside}
+.grp>summary i{font-style:normal;font-size:11px;color:var(--mu);background:var(--gr);border-radius:999px;padding:1px 7px;margin-left:4px}
+fieldset.grp{padding-top:0}
+.hint{margin:8px 0 0;font-size:13px;color:var(--mu);background:var(--gr);border-radius:10px;padding:8px 10px}
+.logadd{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;margin-top:8px}
+.logadd textarea{margin:0}
+.logs{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:10px}
+.logs li{display:grid;grid-template-columns:58px 1fr auto;gap:8px;align-items:start;font-size:14px}
+.logs time{color:var(--mu);font-size:12px;padding-top:2px;font-variant-numeric:tabular-nums}
+.logs p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.lx{border:0;background:none;color:var(--mu);font:inherit;font-size:12px;cursor:pointer;padding:2px 0}
+.lx.arm{color:var(--rd)}
+.note p{margin:8px 0 0;font-size:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px}
+.stack{display:grid;gap:8px;margin-top:16px}
+.cf{margin:10px 0 0;font-size:14px}
+pre.raw{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 ui-monospace,Menlo,monospace;background:var(--bg);border-radius:12px;padding:10px;max-height:240px;overflow:auto}
+#toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:14px;font-size:13px;z-index:40;transition:.2s;max-width:calc(100% - 32px);text-align:center}
+#toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+#toast button{border:0;background:none;color:var(--acs);font:inherit;font-size:13px;margin-left:8px;cursor:pointer;text-decoration:underline}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){#toast{transition:none}}
+@media (max-width:380px){.g2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><div class="wrap"><div class="hd"><h1>내 식물 🪴</h1><span id="date"></span></div><p id="pv" class="pv" hidden>Claude 미리보기예요. 여기서 바꾼 내용은 폰 앱에 저장되지 않아요</p><div id="sum"></div></div></header>
+<main><div class="wrap" id="main"></div></main>
+<nav class="nav"><button data-tab="all">🪴 식물</button><button data-tab="today">🌿 오늘</button><button class="add" data-new>＋ 추가</button><button data-tab="settings">⚙️ 설정</button></nav>
+<div id="ov" hidden><div id="sh" role="dialog" aria-modal="true" aria-label="식물 정보"></div></div>
+<div id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="imp" accept=".json,application/json,text/plain" hidden>
+<script>
+(()=>{
+const APP_VER='2026.11.03';
+const LOCS0=['내방','거실','안방','베란다'],LI={'내방':'🛏️','거실':'🛋️','안방':'🌙','베란다':'☀️','회사':'🏢'};
+const CATS=['코덱스','구근','선인장','다육','난초','틸란드시아','분재'],GROWTH=['동형','하형','봄·가을','사계절'],ROUTES=['구매','선물','나눔','서비스'];
+const STATUS={alive:'키우는 중',gone:'떠남',given:'보냄',check:'확인 필요'};
+const $=s=>document.querySelector(s),LKEY='plants-v2',DAY=864e5;
+const dt=s=>new Date(s+'T00:00:00');
+const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
+const today=()=>iso(new Date());
+const addD=(s,n)=>{const d=dt(s);d.setDate(d.getDate()+n);return iso(d)};
+const diff=(a,b)=>Math.round((dt(a)-dt(b))/DAY);
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+/* Claude 미리보기 안에서만 window.claude가 있어요. 폰 앱에서는 없어요 */
+const inClaude=()=>{try{return !!(window.claude&&window.claude.use)}catch(e){return false}};
+const use=n=>{try{return inClaude()?Promise.resolve(window.claude.use(n)).catch(()=>null):Promise.resolve(null)}catch(e){return Promise.resolve(null)}};
+const ACQ0={date:'',place:'',price:'',route:'구매',note:''};
+const norm=p=>{p=p||{};return Object.assign({id:uid(),name:'',sci:'',alias:'',cat:'',growth:'',origin:'',loc:'내방',status:'alive',left:null,group:'',pot:'',soil:'',fert:'',w:null,lw:null,wStart:null,wn:'',f:null,lf:null,fStart:null,tips:'',logs:[]},p,{acq:Object.assign({},ACQ0,p.acq||{}),logs:Array.isArray(p.logs)?p.logs:[]})};
+const S0=()=>({locs:[...LOCS0],lastBackup:null});
+
+/* ---------- 상태 ---------- */
+let P=[],N={},S=S0(),D={};
+let mode='loading',PVD=false,DL=null,persisted=null,bip=null;
+/* 미리보기인지: Claude 안이거나, 미리보기용 데이터로 열렸을 때 */
+const pv=()=>PVD||inClaude();
+let tab='all',st='',flt='전체',cf='',q='',undo=null,tt,sel='',eid=null,armed=null,pending=null,sheetOpen=false,skipPop=0;
+
+/* ---------- 이 기기 저장 ---------- */
+function loadLocal(){try{const o=JSON.parse(localStorage.getItem(LKEY)||'null');if(o&&Array.isArray(o.plants)){P=o.plants.map(norm);N=o.notes||{};S=Object.assign(S0(),o.settings||{});D=o.deleted||{};if(P.length)S.started=true;return true}}catch(e){}return false}
+let saveErr=false;
+function saveLocal(){try{localStorage.setItem(LKEY,JSON.stringify({plants:P,notes:N,settings:S,deleted:D}));saveErr=false;return true}catch(e){if(!saveErr){saveErr=true;toast('저장하지 못했어요. 설정에서 전체 백업을 받아 두세요.')}return false}}
+/* 모든 저장은 여기를 지나요. 다음 단계의 구글 드라이브 동기화가 여기에 붙어요 */
+function commit(){saveLocal()}
+function putPlant(p){p.updated=Date.now();S.started=true;commit()}
+function delPlant(id){D[id]=Date.now();commit()}
+function putSettings(){S.updated=Date.now();commit()}
+function askPersist(){const s=navigator.storage;if(pv()||!s||!s.persist)return;s.persisted().then(v=>v||s.persist()).then(v=>{persisted=!!v;if(tab==='settings')render()}).catch(()=>{})}
+
+/* 백업 파일 읽기: 예전 형식(목록만 있는 파일)도 받아요 */
+function fromBackup(o){
+const plants=Array.isArray(o)?o:o&&Array.isArray(o.plants)?o.plants:null;
+if(!plants)return null;
+const notes=o&&!Array.isArray(o)?(Array.isArray(o.notes)?o.notes:Object.values(o.notes||{})):[];
+return {plants:plants.map(norm),notes,settings:o&&o.settings||null,deleted:o&&o.deleted||{}};
+}
+function loadData(d){
+P=d.plants;N={};d.notes.forEach(n=>{if(n&&n.id)N[n.id]=n});
+if(d.settings)S=Object.assign(S0(),S,d.settings,{lastBackup:S.lastBackup});
+D=Object.assign({},d.deleted);
+}
+
+async function init(){
+const has=loadLocal();
+if(!has){
+/* 미리보기에만 함께 올라가는 파일이에요. 폰 앱 주소에는 없어서 그냥 넘어가요 */
+try{const r=await fetch('preview-data.json',{cache:'no-store'});if(r.ok){const d=fromBackup(await r.json());if(d){loadData(d);S.started=true;PVD=true;saveLocal()}}}catch(e){}
+}
+if(pv())use('downloads').then(d=>{DL=d});
+mode='local';render();
+if(P.length)askPersist();
+}
+
+/* ---------- 계산 ---------- */
+const alive=()=>P.filter(p=>p.status==='alive');
+const gone=()=>P.filter(p=>p.status!=='alive');
+const left=(p,k)=>{const e=p[k],l=k==='w'?(p.lw||p.wStart):(p.lf||p.fStart);return e&&l?diff(addD(l,e),today()):null};
+const due=(p,k)=>{const l=left(p,k);return l!==null&&l<=0};
+const txt=l=>l<0?(-l)+'일 지남':l===0?'오늘':l+'일 후';
+const cls=l=>l<0?'od':l===0?'td':l<=2?'sn':'';
+const nz=v=>v===null?999:v,urg=p=>Math.min(nz(left(p,'w')),nz(left(p,'f'))),byN=(a,b)=>a.name.localeCompare(b.name,'ko');
+const stf={w:p=>due(p,'w'),f:p=>due(p,'f'),d:p=>p.lw===today()||p.lf===today(),u:p=>!p.w};
+const fd=s=>{const d=dt(s);return `${d.getMonth()+1}/${d.getDate()} (${'일월화수목금토'[d.getDay()]})`};
+const fmtD=s=>{if(!s)return'';const [y,m,d]=s.split('-');return y.slice(2)+(m?'.'+(+m):'')+(d?'.'+(+d):'')};
+const ym=s=>s?s.slice(2,7).replace('-','.'):'';
+function together(p){const a=p.acq&&p.acq.date,b=p.left&&p.left.d;let s=`${ym(a)||'?'} - ${ym(b)||'?'}`;if(a&&b&&b.length>=7){const n=(+b.slice(0,4)-+a.slice(0,4))*12+(+b.slice(5,7)-+a.slice(5,7));s+=n<1?', 한 달이 안 되게 함께':`, ${n>=12?Math.floor(n/12)+'년 ':''}${n%12?n%12+'개월 ':''}함께`}return s}
+const locs=()=>[...S.locs,...[...new Set(alive().map(p=>p.loc))].filter(l=>!S.locs.includes(l))];
+const grp=a=>locs().map(l=>[l,a.filter(p=>p.loc===l)]).filter(g=>g[1].length);
+const standalone=()=>{try{return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true}catch(e){return false}};
+
+/* ---------- 화면 조각 ---------- */
+const tag=p=>`<span class="tg">${LI[p.loc]||'📍'} ${esc(p.loc)}</span>`;
+const sec=(g,row)=>g.map(([l,a])=>`<section><h2>${LI[l]||'📍'} ${esc(l)}<i>${a.length}</i></h2>${a.map(row).join('')}</section>`).join('');
+const sub=p=>[p.cat,p.w?`물 ${p.w}일마다`:''].filter(Boolean).join(', ');
+const rT=p=>`<div class="row" data-open="${p.id}"><div class="nm"><b>${esc(p.name)}</b><small>${esc(p.cat)}</small></div><div class="act">${due(p,'w')?`<button class="b w" data-do="w" data-id="${p.id}">💧 ${txt(left(p,'w'))}</button>`:''}${due(p,'f')?`<button class="b f" data-do="f" data-id="${p.id}">🌱 ${txt(left(p,'f'))}</button>`:''}</div></div>`;
+const rA=p=>{const l=left(p,'w'),f=left(p,'f');return `<div class="row" data-open="${p.id}"><div class="nm"><div class="l1"><b>${esc(p.name)}</b>${tag(p)}</div><small>${esc(sub(p))}</small></div><div class="act">${f!==null&&f<=0?`<span class="pill sn">🌱 ${txt(f)}</span>`:''}${p.w?(l===null?'':`<span class="pill ${cls(l)}">💧 ${txt(l)}</span>`):'<span class="pill un">물주기 미정</span>'}</div></div>`};
+const rU=x=>`<div class="row" data-open="${x.p.id}"><div class="l1"><b>${esc(x.p.name)}</b>${tag(x.p)}</div><span class="pill ${x.k==='w'?'td':'sn'}">${x.k==='w'?'💧 물':'🌱 비료'}</span></div>`;
+const rM=p=>`<div class="row" data-open="${p.id}"><div class="nm"><div class="l1"><b>${esc(p.name)}</b><span class="tg ${p.status}">${STATUS[p.status]||''}</span></div><small>${esc(together(p))}</small>${p.left&&p.left.note?`<small>${esc(p.left.note)}</small>`:''}</div></div>`;
+
+function upcoming(){
+const a=[];alive().forEach(p=>['w','f'].forEach(k=>{const l=left(p,k);if(l!==null&&l>0)a.push({p,k,l})}));
+if(!a.length)return'';
+a.sort((x,y)=>x.l-y.l||byN(x.p,y.p)||y.k.localeCompare(x.k));
+let h='',cur=-1;
+a.slice(0,60).forEach(x=>{if(x.l!==cur){cur=x.l;h+=`<div class="dh">${x.l===1?'내일':x.l===2?'모레':x.l+'일 후'}, ${fd(addD(today(),x.l))}</div>`}h+=rU(x)});
+return `<h3 class="uh">앞으로 줄 목록</h3><section class="flat">${h}</section>`;
+}
+function emptyAll(){
+if(mode==='loading')return `<div class="empty">식물을 불러오는 중이에요<br>🪴</div>`;
+if(!S.started)return `<div class="ok"><span>🪴</span><b>내 식물 관리에 오신 걸 환영해요</b><small>식물 기록은 이 기기에 저장돼요.<br>전에 받아 둔 백업 파일이 있으면 가져오세요.</small><div class="stack"><button class="b big sv" data-do="bk-imp">백업 파일 가져오기</button><button class="b big" data-do="start">빈 상태로 시작</button>${bip&&!standalone()?'<button class="b big" data-do="install">📲 홈 화면에 앱 설치</button>':''}</div></div>`;
+return `<div class="empty">아직 등록한 식물이 없어요.<br>＋ 추가로 첫 식물을 등록하거나, 설정에서 백업 파일을 가져오세요.<br><button class="b" data-tab="settings">설정 열기</button></div>`;
+}
+function vToday(){
+if(!alive().length)return emptyAll();
+const set=alive().filter(p=>p.w||p.f);
+if(!set.length)return `<div class="ok"><span>🪴</span><b>물주기 주기를 정한 식물이 아직 없어요.</b><small>식물마다 주기를 정하면 이곳에 오늘 할 일이 모여요.</small><br><button class="b" data-do="go-u">물주기 정하러 가기</button></div>`;
+const a=alive().filter(p=>due(p,'w')||due(p,'f')),dn=alive().filter(stf.d).length;
+return (a.length?sec(grp(a),rT):`<div class="ok"><span>🌿</span><b>모든 식물에게 물을 주었습니다.</b><small>${dn?'오늘도 수고 많았어요':'오늘은 쉬어가는 날이에요'}</small></div>`)+upcoming();
+}
+function match(p){const s=q.trim().toLowerCase();return !s||[p.name,p.alias,p.sci].some(v=>(v||'').toLowerCase().includes(s))}
+function list(){
+const a=alive().filter(p=>(flt==='전체'||p.loc===flt)&&(!cf||p.cat===cf)&&(!st||stf[st](p))&&match(p)).sort((x,y)=>urg(x)-urg(y)||byN(x,y));
+return a.length?`<section class="flat">${a.map(rA).join('')}</section>`:(alive().length?`<div class="empty">맞는 식물이 없어요<br>🪴</div>`:emptyAll());
+}
+function vAll(){
+if(!P.length)return emptyAll();
+const A=alive(),cs=['전체',...locs()],cats=CATS.filter(c=>A.some(p=>p.cat===c)),g=gone().length;
+return `<div class="chips">${cs.map(c=>`<button class="ch${c===flt?' on':''}" data-flt="${esc(c)}">${c==='전체'?'':(LI[c]||'📍')+' '}${esc(c)} ${c==='전체'?A.length:A.filter(p=>p.loc===c).length}</button>`).join('')}</div>`+
+(cats.length?`<div class="chips">${cats.map(c=>`<button class="ch sm${c===cf?' on':''}" data-cf="${esc(c)}">${esc(c)} ${A.filter(p=>p.cat===c).length}</button>`).join('')}</div>`:'')+
+`<input id="q" placeholder="이름, 학명, 별칭으로 찾기" value="${esc(q)}" autocomplete="off"><div id="list">${list()}</div>`+
+(g?`<button class="mc" data-tab="memorial"><span><b>🕊️ 기념관</b><small>함께했던 식물 ${g}</small></span><span class="mu">보기</span></button>`:'');
+}
+function vMem(){
+const a=gone().sort((x,y)=>((y.left&&y.left.d)||'').localeCompare((x.left&&x.left.d)||'')||byN(x,y));
+return `<div class="vh"><button class="back" data-tab="all">← 식물</button></div><div class="vh"><h2>🕊️ 기념관</h2><p>함께했던 식물 ${a.length}</p></div>`+
+(a.length?`<section class="flat">${a.map(rM).join('')}</section>`:`<div class="empty">아직 비어 있어요</div>`);
+}
+function vSet(){
+const days=S.lastBackup?diff(today(),S.lastBackup):null;
+const where=pv()?'Claude 미리보기 화면이에요. 여기서 바꾼 내용은 폰 앱에 저장되지 않아요.':'이 기기에 저장하고 있어요. 구글 드라이브 자동 저장은 다음 단계에서 추가돼요. 그 전까지는 가끔 전체 백업을 받아 두세요.';
+const prot=pv()?'':persisted===true?'<p class="mu">저장 공간 보호: 켜짐. 기기 저장 공간이 부족해져도 브라우저가 이 앱의 기록을 지우지 않아요.</p>':persisted===false?'<p class="mu">저장 공간 보호: 꺼짐. 홈 화면에 설치하면 켜질 수 있어요.</p>':'';
+const inst=standalone()?'<p class="mu">설치된 앱으로 열려 있어요.</p>':bip?'<div class="stack"><button class="b big sv" data-do="install">📲 홈 화면에 앱 설치</button></div>':'<p class="mu">Chrome 메뉴(⋮)에서 \'홈 화면에 추가\'나 \'앱 설치\'를 누르면 앱처럼 쓸 수 있어요.</p>';
+return `<div class="vh"><h2>⚙️ 설정</h2></div>
+<section class="set"><h3>저장</h3><p>${where}</p>${prot}<p class="mu">키우는 식물 ${alive().length}개, 기념관 ${gone().length}개</p></section>
+${pv()?'':`<section class="set"><h3>앱 설치</h3>${inst}</section>`}
+<section class="set"><h3>백업</h3><p class="mu">마지막 백업: ${S.lastBackup?`${fmtD(S.lastBackup)} (${days===0?'오늘':days+'일 전'})`:'아직 없어요'}</p>
+<div class="stack"><button class="b big sv" data-do="bk-json">전체 백업 받기 (JSON)</button><button class="b big" data-do="bk-csv">엑셀용으로 받기 (CSV)</button><button class="b big" data-do="bk-imp">백업 파일 가져오기</button></div>
+<p class="mu">전체 백업에는 기록, 케어팁, 기념관까지 모두 들어 있어요. 폰을 바꾸거나 다른 앱으로 옮길 때 이 파일을 쓰세요. 엑셀용은 식물 목록만 한 줄씩 담아요.</p>
+<p class="mu">구글 드라이브 자동 저장은 다음 단계에서 이곳에 추가돼요.</p></section>
+<p class="ver">앱 버전 ${APP_VER}</p>`;
+}
+function renderHead(){
+$('#date').textContent=new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+if(tab!=='all'&&tab!=='today'||!alive().length){$('#sum').innerHTML='';return}
+const A=alive(),nw=A.filter(stf.w).length,nf=A.filter(stf.f).length,dn=A.filter(stf.d).length,nu=A.filter(stf.u).length;
+$('#sum').innerHTML=`<button class="st w${st==='w'?' on':''}" data-st="w">💧 물 ${nw}</button><button class="st f${st==='f'?' on':''}" data-st="f">🌱 비료 ${nf}</button><button class="st${st==='d'?' on':''}" data-st="d">✅ 오늘 완료 ${dn}</button>${nu?`<button class="st u${st==='u'?' on':''}" data-st="u">⚪ 물주기 미정 ${nu}</button>`:''}`;
+}
+function render(){
+$('#pv').hidden=!pv();
+renderHead();
+$('#main').innerHTML=tab==='today'?vToday():tab==='memorial'?vMem():tab==='settings'?vSet():vAll();
+document.querySelectorAll('.nav [data-tab]').forEach(b=>b.classList.toggle('on',b.dataset.tab===tab||(tab==='memorial'&&b.dataset.tab==='all')));
+}
+function refresh(){const a=document.activeElement;if(a&&a.id==='q'&&tab==='all'){renderHead();$('#list').innerHTML=list()}else render()}
+function toast(m,withUndo){const e=$('#toast');e.innerHTML=esc(m)+(withUndo?'<button data-do="undo">되돌리기</button>':'');e.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),withUndo?4500:3500)}
+
+/* ---------- 뒤로 가기: 폰의 뒤로 버튼이 앱을 닫지 않고 시트와 탭을 닫아요 ---------- */
+function pushNav(kind){if(pv())return;try{history.pushState({nav:kind},'')}catch(e){}}
+function popNav(kind){if(pv())return;try{if(history.state&&history.state.nav===kind){skipPop++;history.back()}}catch(e){}}
+function setTab(t){
+if(t===tab){render();scrollTo(0,0);return}
+const fromAll=tab==='all',toAll=t==='all';
+tab=t;
+if(fromAll&&!toAll)pushNav('tab');else if(!fromAll&&toAll)popNav('tab');
+render();scrollTo(0,0);
+}
+window.addEventListener('popstate',()=>{
+if(skipPop>0){skipPop--;return}
+if(sheetOpen){closeSheet(true);return}
+if(tab!=='all'){tab='all';render();scrollTo(0,0)}
+});
+
+/* ---------- 물·비료 ---------- */
+function care(id,k){
+const p=P.find(x=>x.id===id);if(!p)return;
+const key=k==='w'?'lw':'lf';undo={id,key,prev:p[key]};p[key]=today();putPlant(p);refresh();
+toast(`${k==='w'?'💧':'🌱'} ${p.name} ${k==='w'?'물 줬어요':'비료 줬어요'}`,true);
+}
+
+/* ---------- 시트 ---------- */
+function openSheet(html){$('#sh').innerHTML=html;if(!sheetOpen){sheetOpen=true;pushNav('sheet')}$('#ov').hidden=false;$('#sh').scrollTop=0}
+function closeSheet(fromPop){$('#ov').hidden=true;eid=null;pending=null;if(!sheetOpen)return;sheetOpen=false;if(!fromPop)popNav('sheet')}
+const opt=(arr,v,blank)=>(blank!=null?`<option value="">${blank}</option>`:'')+arr.map(x=>`<option${x===v?' selected':''}>${esc(x)}</option>`).join('');
+function logsHtml(p){const L=p.logs.map((l,i)=>({l,i})).reverse();return L.length?`<ul class="logs">${L.map(({l,i})=>`<li><time>${esc(fmtD(l.d))}</time><p>${esc(l.t)}</p><button class="lx" data-do="logdel" data-i="${i}">지우기</button></li>`).join('')}</ul>`:'<p class="hint">아직 기록이 없어요.</p>'}
+function noteHtml(n){return `<div class="note">${n.tips?`<p>${esc(n.tips)}</p>`:''}${(n.logs||[]).map(l=>`<p><span class="mu">${esc(fmtD(l.d))}</span> ${esc(l.t)}</p>`).join('')}${n.text?`<p>${esc(n.text)}</p>`:''}</div>`}
+function sheet(id){
+eid=id;armed=null;
+const isNew=!id,p=isNew?norm({loc:flt!=='전체'?flt:'내방',cat:cf||''}):P.find(x=>x.id===id);if(!p)return;
+sel=p.loc;const lf=p.left||{},a=p.acq,ng=N[p.group];
+openSheet(`<div class="shh"><h3>${isNew?'새 식물':esc(p.name)}</h3><button class="x" data-do="close" aria-label="닫기">×</button></div>
+${p.sci||p.alias?`<p class="sci">${esc([p.sci,p.alias].filter(Boolean).join(', '))}</p>`:''}
+${!isNew&&p.status==='alive'?`<div class="g2 qa"><button class="b w big" data-do="w2">💧 물 줌</button><button class="b f big" data-do="f2">🌱 비료 줌</button></div>`:''}
+<label for="fn">이름</label><input id="fn" value="${esc(p.name)}" placeholder="예: 파키포디움 그락실리우스">
+<label>위치</label><div class="chips" id="lc">${locs().map(l=>`<button class="ch${l===sel?' on':''}" data-loc="${esc(l)}">${LI[l]||'📍'} ${esc(l)}</button>`).join('')}</div>
+<div class="g2"><label for="fc">종류<select id="fc">${opt(CATS,p.cat,'')}</select></label><label for="fg">생육형<select id="fg">${opt(GROWTH,p.growth,'모름')}</select></label></div>
+<fieldset class="grp"><legend>물주기와 비료</legend>
+<div class="g2"><label for="fw">물주기 (일)<input id="fw" type="number" inputmode="numeric" min="1" value="${p.w||''}" placeholder="비우면 미정"></label><label for="fl">마지막 물 준 날<input id="fl" type="date" value="${p.lw||''}"></label></div>
+${p.wn?`<p class="hint">메모 기준: ${esc(p.wn)}</p>`:''}${p.lw?'':'<p class="hint">마지막 물 준 날을 비워 두면 오늘부터 세요.</p>'}
+<div class="g2"><label for="ff">비료 주기 (일)<input id="ff" type="number" inputmode="numeric" min="1" value="${p.f||''}" placeholder="비우면 안 줌"></label><label for="flf">마지막 비료<input id="flf" type="date" value="${p.lf||''}"></label></div>
+</fieldset>
+<details class="grp"${isNew?' open':''}><summary>구매·입양 정보</summary>
+<div class="g2"><label for="ad">들인 날<input id="ad" type="date" value="${esc(a.date)}"></label><label for="ar">경로<select id="ar">${opt(ROUTES,a.route)}</select></label></div>
+<div class="g2"><label for="ap">구매처<input id="ap" value="${esc(a.place)}"></label><label for="apr">가격<input id="apr" value="${esc(a.price)}"></label></div>
+<label for="an">메모<input id="an" value="${esc(a.note)}"></label>
+${p.origin?`<p class="hint">원산지: ${esc(p.origin)}</p>`:''}
+</details>
+<details class="grp"><summary>화분·배합토·비료</summary>
+<label for="fp">화분<textarea id="fp" rows="2">${esc(p.pot)}</textarea></label>
+<label for="fso">배합토<textarea id="fso" rows="2">${esc(p.soil)}</textarea></label>
+<label for="ffe">비료<textarea id="ffe" rows="2">${esc(p.fert)}</textarea></label>
+</details>
+${isNew?'':`<details class="grp" open><summary>기록 <i id="lc-n">${p.logs.length}</i></summary>
+<div class="logadd"><textarea id="lt" rows="2" placeholder="오늘 날짜로 기록돼요"></textarea><button class="b" data-do="log">기록 남기기</button></div><div id="logs">${logsHtml(p)}</div></details>`}
+<details class="grp"><summary>케어팁</summary><textarea id="ftp" rows="6" placeholder="판매자 조언, 관리 요령">${esc(p.tips)}</textarea></details>
+${ng?`<details class="grp"><summary>${esc(ng.title)} 공통 노트</summary>${noteHtml(ng)}</details>`:''}
+${isNew?'':`<details class="grp"${p.status!=='alive'?' open':''}><summary>상태</summary>
+<label for="fs">상태<select id="fs">${Object.entries(STATUS).map(([k,v])=>`<option value="${k}"${k===p.status?' selected':''}>${v}</option>`).join('')}</select></label>
+<div class="g2"><label for="fld">떠난 때<input id="fld" value="${esc(lf.d||'')}" placeholder="예: 2026-06"></label><label for="fln">메모<input id="fln" value="${esc(lf.note||'')}"></label></div>
+<p class="hint">떠남, 보냄, 확인 필요로 바꾸면 목록에서 빠지고 기념관에 남아요.</p></details>`}
+<div class="btns"><button class="b big sv" data-do="save">저장</button>${isNew?'<button class="b big" data-do="close">닫기</button>':'<button class="b big dl" data-do="del">삭제</button>'}</div>`);
+}
+const v=id=>{const e=$('#'+id);return e?e.value.trim():''};
+function saveSheet(){
+const name=v('fn');if(!name){$('#fn').focus();toast('이름을 적어 주세요');return}
+let p=eid&&P.find(x=>x.id===eid);const isNew=!p;if(isNew){p=norm({});P.push(p)}
+const w=parseInt(v('fw'))||null,f=parseInt(v('ff'))||null;
+const lw=v('fl')||null,lf=v('flf')||null;
+Object.assign(p,{name,loc:sel||'내방',cat:v('fc'),growth:v('fg'),w,lw,wStart:w&&!lw?(p.wStart||today()):null,f,lf,fStart:f&&!lf?(p.fStart||today()):null,
+acq:{date:v('ad'),place:v('ap'),price:v('apr'),route:v('ar')||'구매',note:v('an')},pot:v('fp'),soil:v('fso'),fert:v('ffe'),tips:$('#ftp').value});
+if($('#fs')){p.status=$('#fs').value;p.left=p.status==='alive'?null:{d:v('fld'),note:v('fln')}}
+putPlant(p);closeSheet();render();toast(isNew?'새 식물을 등록했어요':p.status==='alive'?'저장했어요':'기념관에 남겼어요');
+}
+function addLog(){
+const p=P.find(x=>x.id===eid),t=v('lt');if(!p||!t)return;
+p.logs.push({d:today(),t});putPlant(p);$('#lt').value='';$('#logs').innerHTML=logsHtml(p);$('#lc-n').textContent=p.logs.length;toast('기록했어요');
+}
+
+/* ---------- 백업 ---------- */
+function backupData(){return {app:'내 식물 관리',version:3,exported:today(),plants:P,notes:Object.values(N),settings:S,deleted:D}}
+const csvq=s=>{s=String(s==null?'':s);return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s};
+function csv(){
+const H=['이름','학명','별칭','종류','생육형','원산지','위치','상태','떠난 때','떠난 메모','들인 날','경로','구매처','가격','구매 메모','화분','배합토','비료','물주기(일)','마지막 물','비료 주기(일)','마지막 비료','물주기 메모','케어팁','기록'];
+const rows=P.map(p=>[p.name,p.sci,p.alias,p.cat,p.growth,p.origin,p.loc,STATUS[p.status],p.left&&p.left.d,p.left&&p.left.note,p.acq.date,p.acq.route,p.acq.place,p.acq.price,p.acq.note,p.pot,p.soil,p.fert,p.w,p.lw,p.f,p.lf,p.wn,p.tips,p.logs.map(l=>(fmtD(l.d)?fmtD(l.d)+' ':'')+l.t).join('\n')]);
+return '﻿'+[H,...rows].map(r=>r.map(csvq).join(',')).join('\r\n');
+}
+function saved(isBackup){if(isBackup){S.lastBackup=today();putSettings();if(tab==='settings')render()}}
+async function saveFile(filename,data,mime,isBackup){
+if(pv()){
+/* Claude 미리보기: Claude가 저장 확인 창을 띄워요 */
+const dl=DL||await use('downloads');
+if(!dl){openSheet(`<div class="shh"><h3>파일로 받을 수 없는 화면이에요</h3><button class="x" data-do="close" aria-label="닫기">×</button></div><p class="cf">지금은 아래 내용을 복사해 두세요.</p><pre class="raw">${esc(data.slice(0,20000))}${data.length>20000?'\n…':''}</pre><div class="btns"><button class="b big sv" data-do="copy">복사</button><button class="b big" data-do="close">닫기</button></div>`);pending={copy:data};return}
+try{await dl.save({filename,data});saved(isBackup);toast('파일을 저장했어요')}
+catch(e){const c=e&&e.code;toast(c==='declined'?'저장을 취소했어요':c==='rate_limited'?'잠시 후 다시 눌러 주세요':'이 화면에서는 파일을 받을 수 없어요')}
+return}
+/* 폰 앱: 다운로드 폴더에 저장하거나, 되는 파일이면 공유 */
+const blob=new Blob([data],{type:mime});let file=null,share=false;
+try{file=new File([blob],filename,{type:mime});share=!!(navigator.canShare&&navigator.canShare({files:[file]}))}catch(e){}
+openSheet(`<div class="shh"><h3>${isBackup?'전체 백업':'엑셀용 목록'}</h3><button class="x" data-do="close" aria-label="닫기">×</button></div>
+<p class="cf">${esc(filename)}<br><span class="mu">${Math.max(1,Math.round(blob.size/1024))}KB</span></p>
+<div class="stack"><button class="b big sv" data-do="file-dl">기기에 저장 (다운로드 폴더)</button>${share?'<button class="b big" data-do="file-share">공유 (드라이브, 카톡 등)</button>':''}</div>
+${isBackup?'<p class="hint">드라이브에 올리려면 저장한 뒤 내 파일 앱에서 공유하세요. 자동 저장은 다음 단계에서 추가돼요.</p>':''}`);
+pending={file:{filename,blob,file,isBackup}};
+}
+function fileDownload(){
+const f=pending&&pending.file;if(!f)return;
+const url=URL.createObjectURL(f.blob),a=document.createElement('a');
+a.href=url;a.download=f.filename;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+saved(f.isBackup);closeSheet();toast('저장을 시작했어요. 다운로드 폴더를 확인하세요');
+}
+async function fileShare(){
+const f=pending&&pending.file;if(!f||!f.file)return;
+try{await navigator.share({files:[f.file],title:f.filename});saved(f.isBackup);closeSheet();toast('공유했어요')}
+catch(e){toast(e&&e.name==='AbortError'?'공유를 취소했어요':'공유하지 못했어요. 기기에 저장을 눌러 주세요')}
+}
+function readImport(file){
+const r=new FileReader();
+r.onload=()=>{let o;try{o=JSON.parse(String(r.result).replace(/^﻿/,''))}catch(e){toast('JSON 백업 파일이 아니에요');return}
+const d=fromBackup(o);
+if(!d){toast('이 파일에서 식물 목록을 찾지 못했어요');return}
+const na=d.plants.filter(p=>p.status==='alive').length;
+openSheet(`<div class="shh"><h3>백업 가져오기</h3><button class="x" data-do="close" aria-label="닫기">×</button></div><p class="cf">이 파일에는 식물 ${d.plants.length}개가 있어요 (키우는 식물 ${na}개, 기념관 ${d.plants.length-na}개).</p>${P.length?`<p class="cf">가져오면 지금 있는 식물 ${P.length}개가 이 파일 내용으로 바뀌어요. 먼저 지금 상태를 백업해 두면 안전해요.</p>`:''}<div class="btns"><button class="b big sv" data-do="imp-ok">가져오기</button><button class="b big" data-do="close">닫기</button></div>`);
+pending=d;
+};
+r.onerror=()=>toast('파일을 읽지 못했어요');
+r.readAsText(file);
+}
+function applyImport(){
+const d=pending;if(!d||!d.plants)return;
+const keep=new Set(d.plants.map(p=>p.id)),now=Date.now(),removed=P.filter(p=>!keep.has(p.id)).map(p=>p.id);
+loadData(d);removed.forEach(id=>{D[id]=now});
+S.started=true;S.updated=now;commit();askPersist();
+const wasTab=tab!=='all';
+$('#ov').hidden=true;pending=null;eid=null;
+if(sheetOpen){sheetOpen=false;if(!pv())try{if(history.state&&history.state.nav==='sheet'){skipPop++;history.go(wasTab?-2:-1)}}catch(e){}}
+flt='전체';cf='';st='';q='';tab='all';render();scrollTo(0,0);toast(`식물 ${P.length}개를 가져왔어요`);
+}
+function install(){if(!bip)return;const e=bip;bip=null;e.prompt();e.userChoice.then(()=>render()).catch(()=>render())}
+
+/* ---------- 입력 ---------- */
+document.addEventListener('click',e=>{
+const t=e.target;let b=t.closest('[data-do]');
+if(b){
+const a=b.dataset.do;
+if(a==='w'||a==='f')care(b.dataset.id,a);
+else if(a==='w2'||a==='f2'){const id=eid;closeSheet();care(id,a[0])}
+else if(a==='undo'){if(undo){const p=P.find(x=>x.id===undo.id);if(p){p[undo.key]=undo.prev;putPlant(p);refresh()}undo=null}$('#toast').classList.remove('show')}
+else if(a==='save')saveSheet();
+else if(a==='log')addLog();
+else if(a==='logdel'){const p=P.find(x=>x.id===eid),i=+b.dataset.i;if(armed!==b){if(armed)armed.classList.remove('arm'),armed.textContent='지우기';armed=b;b.classList.add('arm');b.textContent='정말 지울까요?';return}if(p){p.logs.splice(i,1);putPlant(p);$('#logs').innerHTML=logsHtml(p);$('#lc-n').textContent=p.logs.length}armed=null}
+else if(a==='del'){if(armed!==b){armed=b;b.textContent='정말 삭제할까요?';return}const id=eid;P=P.filter(x=>x.id!==id);delPlant(id);closeSheet();render();toast('삭제했어요')}
+else if(a==='close')closeSheet();
+else if(a==='go-u'){st='u';setTab('all')}
+else if(a==='start'){S.started=true;putSettings();render()}
+else if(a==='install')install();
+else if(a==='bk-json')saveFile(`my-plants-backup-${today()}.json`,JSON.stringify(backupData(),null,1),'application/json',true);
+else if(a==='bk-csv')saveFile(`my-plants-list-${today()}.csv`,csv(),'text/csv',false);
+else if(a==='file-dl')fileDownload();
+else if(a==='file-share')fileShare();
+else if(a==='bk-imp'){$('#imp').value='';$('#imp').click()}
+else if(a==='imp-ok')applyImport();
+else if(a==='copy'){const d=pending&&pending.copy;if(d&&navigator.clipboard)navigator.clipboard.writeText(d).then(()=>toast('복사했어요'),()=>toast('복사하지 못했어요. 내용을 길게 눌러 복사해 주세요'))}
+return}
+b=t.closest('[data-loc]');if(b){sel=b.dataset.loc;document.querySelectorAll('#lc .ch').forEach(x=>x.classList.toggle('on',x===b));return}
+b=t.closest('[data-flt]');if(b){flt=b.dataset.flt;render();return}
+b=t.closest('[data-cf]');if(b){cf=cf===b.dataset.cf?'':b.dataset.cf;render();return}
+b=t.closest('[data-st]');if(b){st=st===b.dataset.st?'':b.dataset.st;setTab('all');return}
+b=t.closest('[data-tab]');if(b){setTab(b.dataset.tab);return}
+if(t.closest('[data-new]')){sheet(null);return}
+b=t.closest('[data-open]');if(b){sheet(b.dataset.open);return}
+if(t.id==='ov')closeSheet();
+});
+document.addEventListener('input',e=>{if(e.target.id==='q'){q=e.target.value;$('#list').innerHTML=list()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&sheetOpen)closeSheet()});
+$('#imp').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)readImport(f)});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!sheetOpen)refresh()});
+/* 같은 기기에서 앱과 브라우저 탭을 같이 열어 둔 경우 */
+window.addEventListener('storage',e=>{if(e.key===LKEY&&!sheetOpen){loadLocal();refresh()}});
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();bip=e;if(tab==='settings'||!S.started)render()});
+window.addEventListener('appinstalled',()=>{bip=null;toast('홈 화면에 설치했어요');render()});
+
+/* 오프라인에서도 열리게 해 주는 서비스 워커 (폰 앱 주소에서만) */
+function regSW(){if(pv()||!('serviceWorker' in navigator)||!window.isSecureContext)return;navigator.serviceWorker.register('sw.js').catch(()=>{})}
+
+init().then(()=>{if(document.readyState==='complete')regSW();else window.addEventListener('load',regSW)});
+})();
+</script>
+</body>
+</html>
