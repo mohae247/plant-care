@@ -116,13 +116,35 @@ pre.raw{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 ui-monospace,M
 #toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:14px;font-size:13px;z-index:40;transition:.2s;max-width:calc(100% - 32px);text-align:center}
 #toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
 #toast button{border:0;background:none;color:var(--acs);font:inherit;font-size:13px;margin-left:8px;cursor:pointer;text-decoration:underline}
+.hr{display:flex;align-items:center;gap:8px;min-width:0}
+.sy{border:0;font:inherit;font-size:11px;padding:3px 9px;border-radius:999px;background:var(--gr);color:var(--mu);cursor:pointer;white-space:nowrap}
+.sy.err{background:var(--rds);color:var(--rd)}
+.er{color:var(--rd)}
+.lst{margin:10px 0 0;border:1px solid var(--ln);border-radius:14px;overflow:hidden}
+.li{display:flex;align-items:center;gap:6px;padding:4px 6px 4px 14px;border-top:1px solid var(--ln)}
+.li:first-child{border-top:0}
+.nmb{flex:1;min-width:0;text-align:left;border:0;background:none;color:var(--ink);font:inherit;font-size:15px;padding:10px 0;cursor:pointer;overflow-wrap:anywhere}
+.nmb small{color:var(--mu);font-size:12px;margin-left:8px}
+.nmb.st2{cursor:default}.nmb.st2 small{display:block;margin:2px 0 0}
+.mv{flex-shrink:0;border:0;background:var(--gr);color:var(--mu);border-radius:10px;width:38px;height:38px;font-size:13px;cursor:pointer}
+.mv:disabled{opacity:.3;cursor:default}
+.chips.wrap{flex-wrap:wrap;overflow:visible}
+.rn{display:grid;grid-template-columns:auto 1fr 68px auto;gap:6px 8px;align-items:center;margin-top:4px}
+.rn select,.rn input{margin:0}
+.rn span{font-size:13px;color:var(--mu)}
+.steps{margin:14px 0 0;padding-left:22px;display:grid;gap:12px;font-size:14px}
+.steps b{font-weight:400;color:var(--ac);display:block}
+.steps span{display:block;color:var(--ink);line-height:1.55}
+.steps .b{margin-top:8px}
+textarea.code{font:13px/1.5 ui-monospace,Menlo,monospace;word-break:break-all}
+.b:disabled{opacity:.5;cursor:default}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible{outline:2px solid var(--ac);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){#toast{transition:none}}
 @media (max-width:380px){.g2{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
-<header><div class="wrap"><div class="hd"><h1>내 식물 🪴</h1><span id="date"></span></div><p id="pv" class="pv" hidden>Claude 미리보기예요. 여기서 바꾼 내용은 폰 앱에 저장되지 않아요</p><div id="sum"></div></div></header>
+<header><div class="wrap"><div class="hd"><h1>내 식물 🪴</h1><div class="hr"><span id="date"></span><button id="sy" class="sy" data-tab="settings" hidden></button></div></div><p id="pv" class="pv" hidden>Claude 미리보기예요. 여기서 바꾼 내용은 폰 앱에 저장되지 않아요</p><div id="sum"></div></div></header>
 <main><div class="wrap" id="main"></div></main>
 <nav class="nav"><button data-tab="all">🪴 식물</button><button data-tab="today">🌿 오늘</button><button class="add" data-new>＋ 추가</button><button data-tab="settings">⚙️ 설정</button></nav>
 <div id="ov" hidden><div id="sh" role="dialog" aria-modal="true" aria-label="식물 정보"></div></div>
@@ -130,14 +152,18 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 <input type="file" id="imp" accept=".json,application/json,text/plain" hidden>
 <script>
 (()=>{
-const APP_VER='2026.11.03';
+const APP_VER='2026.11.04';
 const LOCS0=['내방','거실','안방','베란다'],LI={'내방':'🛏️','거실':'🛋️','안방':'🌙','베란다':'☀️','회사':'🏢'};
-const CATS=['코덱스','구근','선인장','다육','난초','틸란드시아','분재'],GROWTH=['동형','하형','봄·가을','사계절'],ROUTES=['구매','선물','나눔','서비스'];
+const CATS0=['코덱스','구근','선인장','다육','난초','틸란드시아','분재'],GROWTH=['동형','하형','봄·가을','사계절'],ROUTES=['구매','선물','나눔','서비스'];
 const STATUS={alive:'키우는 중',gone:'떠남',given:'보냄',check:'확인 필요'};
-const $=s=>document.querySelector(s),LKEY='plants-v2',DAY=864e5;
+const ICONS=['🛏️','🛋️','🌙','☀️','🏢','🪟','🍳','🛁','🌳','🪴','📍'];
+const SEASONS=[['봄','🌸'],['여름','☀️'],['가을','🍁'],['겨울','❄️']];
+const $=s=>document.querySelector(s),LKEY='plants-v2',SKEY='plants-sync',PKEY='plants-sync-key',DAY=864e5;
 const dt=s=>new Date(s+'T00:00:00');
 const iso=d=>new Date(d.getTime()-d.getTimezoneOffset()*6e4).toISOString().slice(0,10);
 const today=()=>iso(new Date());
+/* 파일 이름용: 2026-11-04-013305 (날짜-시분초) */
+const stamp=()=>{const d=new Date(),z=n=>String(n).padStart(2,'0');return `${today()}-${z(d.getHours())}${z(d.getMinutes())}${z(d.getSeconds())}`};
 const addD=(s,n)=>{const d=dt(s);d.setDate(d.getDate()+n);return iso(d)};
 const diff=(a,b)=>Math.round((dt(a)-dt(b))/DAY);
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
@@ -147,7 +173,8 @@ const inClaude=()=>{try{return !!(window.claude&&window.claude.use)}catch(e){ret
 const use=n=>{try{return inClaude()?Promise.resolve(window.claude.use(n)).catch(()=>null):Promise.resolve(null)}catch(e){return Promise.resolve(null)}};
 const ACQ0={date:'',place:'',price:'',route:'구매',note:''};
 const norm=p=>{p=p||{};return Object.assign({id:uid(),name:'',sci:'',alias:'',cat:'',growth:'',origin:'',loc:'내방',status:'alive',left:null,group:'',pot:'',soil:'',fert:'',w:null,lw:null,wStart:null,wn:'',f:null,lf:null,fStart:null,tips:'',logs:[]},p,{acq:Object.assign({},ACQ0,p.acq||{}),logs:Array.isArray(p.logs)?p.logs:[]})};
-const S0=()=>({locs:[...LOCS0],lastBackup:null});
+/* 설정: 위치·종류·계절은 여기 있고, 드라이브로 다른 기기와 같이 맞춰요. lastBackup만 이 기기 것이에요 */
+const S0=()=>({locs:[...LOCS0],cats:[...CATS0],icons:{},seasons:[3,6,9,12],rainy:{from:[6,20],to:[7,31]},snapKeep:7,lastBackup:null});
 
 /* ---------- 상태 ---------- */
 let P=[],N={},S=S0(),D={};
@@ -160,8 +187,287 @@ let tab='all',st='',flt='전체',cf='',q='',undo=null,tt,sel='',eid=null,armed=n
 function loadLocal(){try{const o=JSON.parse(localStorage.getItem(LKEY)||'null');if(o&&Array.isArray(o.plants)){P=o.plants.map(norm);N=o.notes||{};S=Object.assign(S0(),o.settings||{});D=o.deleted||{};if(P.length)S.started=true;return true}}catch(e){}return false}
 let saveErr=false;
 function saveLocal(){try{localStorage.setItem(LKEY,JSON.stringify({plants:P,notes:N,settings:S,deleted:D}));saveErr=false;return true}catch(e){if(!saveErr){saveErr=true;toast('저장하지 못했어요. 설정에서 전체 백업을 받아 두세요.')}return false}}
-/* 모든 저장은 여기를 지나요. 다음 단계의 구글 드라이브 동기화가 여기에 붙어요 */
-function commit(){saveLocal()}
+/* 모든 저장은 여기를 지나요. 이 기기에 저장하고, 드라이브가 연결돼 있으면 잠시 뒤 드라이브에도 저장해요 */
+function commit(){const ok=saveLocal();if(linked()){chg++;SY.dirty=true;saveSync();setSync('wait');schedule(2500)}return ok}
+
+/* ---------- 구글 드라이브 동기화 ----------
+   내 구글 계정에 만든 Apps Script 웹 앱을 거쳐 드라이브의 '내 식물 관리/my-plants.json'을 읽고 써요.
+   식물마다 마지막으로 고친 시각(updated)을 비교해서, 더 최근에 고친 쪽을 남겨요. */
+let SY={},syS='',chg=0,syncBusy=false,syncAgain=false,syncTimer=null,remoteDirty=false;
+function loadSync(){try{const o=JSON.parse(localStorage.getItem(SKEY)||'null');if(o&&typeof o==='object')return o}catch(e){}return {}}
+function saveSync(){try{localStorage.setItem(SKEY,JSON.stringify(SY))}catch(e){}}
+const linked=()=>!pv()&&!!(SY.url&&SY.key);
+const fail=c=>{const e=new Error(c);e.code=c;return e};
+const b64e=s=>btoa(s).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const b64d=s=>{s=s.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';return atob(s)};
+const okUrl=u=>/^https:\/\/script\.google\.com\/(a\/macros\/[^/]+\/|macros\/)s\/[\w-]+\/exec$/.test(u||'');
+function pendingKey(){let k='';try{k=localStorage.getItem(PKEY)||''}catch(e){}if(!k){const a=new Uint8Array(18);crypto.getRandomValues(a);k=b64e(String.fromCharCode(...a));try{localStorage.setItem(PKEY,k)}catch(e){}}return k}
+const connCode=()=>'pc1.'+b64e(JSON.stringify({u:SY.url,k:SY.key}));
+const connLink=()=>location.origin+location.pathname+'#connect='+connCode();
+/* 붙여 넣은 글에서 연결 정보 찾기: 연결 코드, 연결 링크, 웹 앱 URL(이 기기에서 만든 열쇠와 짝) */
+function parseConn(s){
+s=String(s||'').trim();const h=s.indexOf('#connect=');if(h>=0)s=s.slice(h+9);
+if(s.startsWith('pc1.')){try{const o=JSON.parse(b64d(s.slice(4)));if(o&&okUrl(o.u)&&o.k)return {url:o.u,key:o.k}}catch(e){}return null}
+s=s.split('?')[0].split('#')[0];
+return okUrl(s)?{url:s,key:pendingKey()}:null;
+}
+async function call(q,cfg){
+const c=cfg||SY,ac=new AbortController(),to=setTimeout(()=>ac.abort(),30000);
+try{
+const r=await fetch(c.url,{method:'POST',body:JSON.stringify(Object.assign({k:c.key},q)),signal:ac.signal,cache:'no-store'});
+const t=await r.text();let o=null;try{o=JSON.parse(t)}catch(e){}
+if(!o||typeof o!=='object')throw fail('setup');
+return o;
+}catch(e){if(e.code)throw e;throw fail(navigator.onLine===false?'off':'net')}
+finally{clearTimeout(to)}
+}
+const schedule=ms=>{clearTimeout(syncTimer);syncTimer=setTimeout(sync,ms)};
+/* 비교용: 키 순서와 상관없이 같은 내용이면 같은 글자가 나와요 */
+const stable=v=>Array.isArray(v)?'['+v.map(stable).join(',')+']':v&&typeof v==='object'?'{'+Object.keys(v).sort().filter(k=>v[k]!==undefined).map(k=>JSON.stringify(k)+':'+stable(v[k])).join(',')+'}':JSON.stringify(v===undefined?null:v);
+const shareS=s=>{const o=Object.assign({},s);delete o.lastBackup;return o};
+const byId=(a,b)=>a.id<b.id?-1:a.id>b.id?1:0;
+const canon=d=>stable({p:[...d.plants].sort(byId),n:d.notes.filter(n=>n&&n.id).sort(byId),s:shareS(d.settings||{}),d:d.deleted||{}});
+function mergeData(L,R){
+const del=Object.assign({},R.deleted);
+Object.entries(L.deleted||{}).forEach(([k,v])=>{if(!(del[k]>=v))del[k]=v});
+const lm=new Map(L.plants.map(p=>[p.id,p])),rm=new Map(R.plants.map(p=>[p.id,p]));
+const plants=[];
+[...rm.keys(),...[...lm.keys()].filter(k=>!rm.has(k))].forEach(id=>{
+const a=lm.get(id),b=rm.get(id),w=!b||(a&&(a.updated||0)>(b.updated||0))?a:b;
+/* 지운 식물은 다른 기기에서 고쳤어도 지운 채로 둬요. 백업 가져오기나 사본 되돌리기로만 되살아나요 */
+if(del[id]&&!((w.restored||0)>del[id]))return;
+plants.push(w);
+});
+const nm=new Map();R.notes.forEach(n=>{if(n&&n.id)nm.set(n.id,n)});
+L.notes.forEach(n=>{if(!n||!n.id)return;const o=nm.get(n.id);if(!o||(n.updated||0)>(o.updated||0))nm.set(n.id,n)});
+const ls=L.settings||{},rs=R.settings||{};
+const settings=Object.assign({},(ls.updated||0)>(rs.updated||0)||!Object.keys(rs).length?ls:rs);
+return {plants,notes:[...nm.values()],settings,deleted:del};
+}
+/* 드라이브 내용을 합쳐 이 기기에 반영해요. 이 기기에만 있던 게 있으면 push:true */
+function applyRemote(raw){
+const r=fromBackup(raw);if(!r)return {push:false};
+r.settings=r.settings||{};
+const L={plants:P,notes:Object.values(N),settings:S,deleted:D},M=mergeData(L,r),cm=canon(M);
+if(cm!==canon(L)){
+P=M.plants;N={};M.notes.forEach(n=>{N[n.id]=n});
+S=Object.assign(S0(),M.settings,{lastBackup:S.lastBackup});D=M.deleted;if(P.length)S.started=true;
+saveLocal();
+if(sheetOpen)remoteDirty=true;else if(mode!=='loading')refresh();
+}
+return {push:cm!==canon(r)};
+}
+const driveData=()=>({app:'내 식물 관리',version:3,exported:new Date().toISOString(),plants:P,notes:Object.values(N),settings:shareS(S),deleted:D});
+async function sync(){
+if(!linked())return;
+if(syncBusy){syncAgain=true;return}
+clearTimeout(syncTimer);
+if(navigator.onLine===false){setSync('off');return}
+syncBusy=true;setSync('busy');
+try{
+for(let i=0;i<5;i++){
+if(SY.replace||SY.dirty){
+/* 올리기: 그사이 다른 기기가 먼저 올렸으면(conflict) 합친 뒤 다시 올려요 */
+const sent=chg,why=SY.replace||'';
+const r=await call({a:'put',base:SY.rev||'',data:driveData(),keep:S.snapKeep,why});
+if(r.ok){SY.rev=r.rev;if(why&&SY.replace===why)SY.replace=null;if(chg===sent)SY.dirty=false;saveSync();if(SY.dirty||SY.replace)continue;break}
+if(r.err!=='conflict')throw fail(r.err||'server');
+SY.rev=r.rev||'';
+if(!SY.replace&&r.data){const m=applyRemote(r.data);if(!m.push&&chg===sent){SY.dirty=false;saveSync();break}}
+saveSync();continue;
+}
+/* 받기: 마지막으로 맞춘 뒤 바뀐 게 없으면 내용 없이 'same'만 와요 */
+const r=await call({a:'get',since:SY.rev||''});
+if(!r.ok)throw fail(r.err||'server');
+if(r.same)break;
+SY.rev=r.rev||'';
+if(!r.data){if(P.length||S.started){SY.dirty=true;saveSync();continue}break}
+const m=applyRemote(r.data);saveSync();
+if(m.push){SY.dirty=true;saveSync();continue}
+break;
+}
+SY.last=Date.now();SY.err=null;saveSync();setSync(SY.dirty||SY.replace?'wait':'ok');
+}catch(e){SY.err=e.code||'net';saveSync();setSync(e.code==='off'?'off':'err')}
+finally{syncBusy=false;if(syncAgain||SY.dirty||SY.replace){syncAgain=false;if(linked()&&syS!=='err'&&syS!=='off')schedule(800)}}
+}
+const errText=c=>({key:'열쇠가 맞지 않아요. 연결을 끊고 다시 연결해 주세요.',setup:'드라이브 스크립트가 응답하지 않아요. 배포 설정(액세스: 모든 사용자)과 URL을 확인해 주세요.',busy:'드라이브가 잠시 바빠요. 조금 뒤 다시 맞춰요.',server:'드라이브 스크립트에서 오류가 났어요.',off:'오프라인이에요.',bad:'드라이브 스크립트가 요청을 이해하지 못했어요. 코드를 다시 복사해 배포해 주세요.'})[c]||'드라이브에 연결하지 못했어요.';
+const ago=t=>{const s=(Date.now()-t)/1e3;return s<60?'방금':s<3600?Math.floor(s/60)+'분 전':s<86400?Math.floor(s/3600)+'시간 전':fmtD(iso(new Date(t)))};
+function syncLine(){
+if(syS==='busy')return '드라이브와 맞추는 중이에요…';
+if(syS==='wait')return '바뀐 내용을 곧 드라이브에 저장해요.';
+if(syS==='off')return '오프라인이에요. 인터넷이 연결되면 드라이브에 저장해요.';
+if(syS==='err')return `<span class="er">${esc(errText(SY.err))}</span> 바뀐 내용은 이 기기에 그대로 있어요.`;
+return SY.last?`드라이브에 저장됨 · ${ago(SY.last)}`:'연결되어 있어요.';
+}
+function setSync(s){syS=s;paintSync()}
+function paintSync(){
+const b=$('#sy');
+if(b){const on=linked();b.hidden=!on;if(on){b.textContent={wait:'☁️ 저장 중',busy:'☁️ 저장 중',off:'☁️ 오프라인',err:'⚠️ 드라이브'}[syS]||'☁️ 저장됨';b.classList.toggle('err',syS==='err')}}
+const l=$('#sy-line');if(l)l.innerHTML=syncLine();
+}
+/* 설정의 '코드 복사'로 내 Apps Script에 붙여 넣는 코드예요. __KEY__ 자리에 이 기기에서 만든 열쇠가 들어가요 */
+const GS=`/* 내 식물 관리 - 구글 드라이브 동기화 (버전 1)
+   앱(내 식물 관리)이 이 스크립트를 거쳐 내 드라이브의 '내 식물 관리' 폴더에 기록을 저장하고 읽어요.
+   KEY는 앱이 만든 비밀 열쇠예요. 다른 사람에게 보여주지 마세요.
+   코드를 고쳤다면: 배포 → 배포 관리 → 연필 → 버전: 새 버전 → 배포 (주소가 그대로 유지돼요) */
+var KEY = '__KEY__';
+var VER = 1;
+var FOLDER = '내 식물 관리';
+var FILE = 'my-plants.json';
+var SNAPS = '자동 사본';
+var props;
+
+function doGet() {
+  return out({ ok: true, app: 'plant-sync', ver: VER });
+}
+
+function doPost(e) {
+  var q;
+  try { q = JSON.parse(e.postData.contents); } catch (err) { return out({ ok: false, err: 'bad' }); }
+  if (!q || q.k !== KEY) return out({ ok: false, err: 'key' });
+  var lock = LockService.getScriptLock();
+  if (!lock.tryLock(25000)) return out({ ok: false, err: 'busy' });
+  try {
+    props = PropertiesService.getScriptProperties();
+    var f = mainFile();
+    var rev = revOf(f);
+    if (q.a === 'ping') return out({ ok: true, rev: rev, ver: VER });
+    if (q.a === 'get') {
+      if (q.since && q.since === rev) return out({ ok: true, rev: rev, same: true });
+      return out({ ok: true, rev: rev, data: f ? read(f) : null });
+    }
+    if (q.a === 'put') {
+      if ((q.base || '') !== rev) return out({ ok: false, err: 'conflict', rev: rev, data: f ? read(f) : null });
+      if (!q.data || !q.data.plants) return out({ ok: false, err: 'bad' });
+      if (f) snapshot(f, q.keep, q.why);
+      var body = JSON.stringify(q.data);
+      if (f) f.setContent(body);
+      else f = folder().createFile(FILE, body, 'application/json');
+      var n = Number(props.getProperty('n') || 0) + 1;
+      props.setProperties({ id: f.getId(), n: String(n), t: String(DriveApp.getFileById(f.getId()).getLastUpdated().getTime()) });
+      return out({ ok: true, rev: String(n) });
+    }
+    if (q.a === 'list') {
+      var s = snapFolder();
+      if (q.keep) prune(s, q.keep);
+      return out({ ok: true, rev: rev, snaps: listOf(s) });
+    }
+    if (q.a === 'snap') {
+      var x = DriveApp.getFileById(q.id);
+      if (!inFolder(x, snapFolder())) return out({ ok: false, err: 'bad' });
+      return out({ ok: true, data: read(x) });
+    }
+    return out({ ok: false, err: 'bad' });
+  } catch (err) {
+    return out({ ok: false, err: 'server', msg: String(err && err.message || err) });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function out(o) {
+  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function read(f) {
+  return JSON.parse(f.getBlob().getDataAsString('UTF-8'));
+}
+
+/* 파일이 바뀔 때마다 1씩 커지는 번호. 드라이브에서 직접 파일을 바꿔도 알아채요 */
+function revOf(f) {
+  if (!f) return '';
+  var n = Number(props.getProperty('n') || 0);
+  var t = String(f.getLastUpdated().getTime());
+  if (!n || t !== props.getProperty('t')) {
+    n++;
+    props.setProperties({ n: String(n), t: t });
+  }
+  return String(n);
+}
+
+function mainFile() {
+  var id = props.getProperty('id');
+  if (id) {
+    try { var f = DriveApp.getFileById(id); if (!f.isTrashed()) return f; } catch (e) {}
+  }
+  var it = folder().getFilesByName(FILE);
+  while (it.hasNext()) {
+    var g = it.next();
+    if (!g.isTrashed()) { props.setProperty('id', g.getId()); return g; }
+  }
+  return null;
+}
+
+function folder() {
+  return byId('fid', function () { return child(DriveApp.getRootFolder(), FOLDER); });
+}
+
+function snapFolder() {
+  return byId('sid', function () { return child(folder(), SNAPS); });
+}
+
+function byId(key, make) {
+  var id = props.getProperty(key);
+  if (id) {
+    try { var x = DriveApp.getFolderById(id); if (!x.isTrashed()) return x; } catch (e) {}
+  }
+  var y = make();
+  props.setProperty(key, y.getId());
+  return y;
+}
+
+function child(parent, name) {
+  var it = parent.getFoldersByName(name);
+  while (it.hasNext()) { var x = it.next(); if (!x.isTrashed()) return x; }
+  return parent.createFolder(name);
+}
+
+/* 자동 사본: 하루 한 번, 그날 처음 바뀌기 전 상태를 남겨요. 되돌리기·가져오기 전에도 하나 남겨요 */
+function snapshot(f, keep, why) {
+  var s = snapFolder();
+  var tz = Session.getScriptTimeZone();
+  var now = new Date();
+  var day = Utilities.formatDate(now, tz, 'yyyy-MM-dd');
+  var name;
+  if (why === 'restore' || why === 'import') {
+    name = 'my-plants-' + day + '-' + Utilities.formatDate(now, tz, 'HHmmss') + (why === 'restore' ? '-되돌리기전' : '-가져오기전') + '.json';
+  } else {
+    name = 'my-plants-' + day + '.json';
+    var it = s.getFilesByName(name);
+    while (it.hasNext()) { if (!it.next().isTrashed()) return; }
+  }
+  f.makeCopy(name, s);
+  prune(s, keep);
+}
+
+/* 보관 개수를 넘은 오래된 사본은 휴지통으로 보내요(30일 동안은 휴지통에서 되살릴 수 있어요) */
+function prune(s, keep) {
+  keep = Math.max(3, Math.min(60, Number(keep) || 7));
+  var daily = 0, before = 0;
+  listOf(s).forEach(function (x) {
+    var pre = x.name.indexOf('전.json') > 0;
+    var over = pre ? (++before > 5) : (++daily > keep);
+    if (over) DriveApp.getFileById(x.id).setTrashed(true);
+  });
+}
+
+function listOf(s) {
+  var it = s.getFiles(), a = [];
+  while (it.hasNext()) {
+    var x = it.next();
+    if (!x.isTrashed()) a.push({ id: x.getId(), name: x.getName(), t: x.getDateCreated().getTime(), size: x.getSize() });
+  }
+  a.sort(function (p, q) { return q.t - p.t; });
+  return a;
+}
+
+function inFolder(x, s) {
+  var it = x.getParents();
+  while (it.hasNext()) { if (it.next().getId() === s.getId()) return true; }
+  return false;
+}
+`;
+const gsCode=k=>GS.split('__KEY__').join(k);
 function putPlant(p){p.updated=Date.now();S.started=true;commit()}
 function delPlant(id){D[id]=Date.now();commit()}
 function putSettings(){S.updated=Date.now();commit()}
@@ -182,13 +488,17 @@ D=Object.assign({},d.deleted);
 
 async function init(){
 const has=loadLocal();
+SY=loadSync();
 if(!has){
 /* 미리보기에만 함께 올라가는 파일이에요. 폰 앱 주소에는 없어서 그냥 넘어가요 */
 try{const r=await fetch('preview-data.json',{cache:'no-store'});if(r.ok){const d=fromBackup(await r.json());if(d){loadData(d);S.started=true;PVD=true;saveLocal()}}}catch(e){}
 }
 if(pv())use('downloads').then(d=>{DL=d});
+if(linked())syS=SY.dirty||SY.replace?'wait':SY.err?'err':'ok';
 mode='local';render();
 if(P.length)askPersist();
+checkHash();
+if(linked())sync();
 }
 
 /* ---------- 계산 ---------- */
@@ -206,11 +516,17 @@ const ym=s=>s?s.slice(2,7).replace('-','.'):'';
 function together(p){const a=p.acq&&p.acq.date,b=p.left&&p.left.d;let s=`${ym(a)||'?'} - ${ym(b)||'?'}`;if(a&&b&&b.length>=7){const n=(+b.slice(0,4)-+a.slice(0,4))*12+(+b.slice(5,7)-+a.slice(5,7));s+=n<1?', 한 달이 안 되게 함께':`, ${n>=12?Math.floor(n/12)+'년 ':''}${n%12?n%12+'개월 ':''}함께`}return s}
 const locs=()=>[...S.locs,...[...new Set(alive().map(p=>p.loc))].filter(l=>!S.locs.includes(l))];
 const grp=a=>locs().map(l=>[l,a.filter(p=>p.loc===l)]).filter(g=>g[1].length);
+const ico=l=>(S.icons&&S.icons[l])||LI[l]||'📍';
+const cats=()=>[...S.cats,...[...new Set(alive().map(p=>p.cat).filter(Boolean))].filter(c=>!S.cats.includes(c))];
+const catsFor=c=>{const a=cats();return c&&!a.includes(c)?[...a,c]:a};
+/* 계절: 설정의 시작 달로 나눠요. 예: 봄 3월, 여름 6월, 가을 9월, 겨울 12월 */
+function seasonOf(m){const s=S.seasons,k=(m-s[0]+12)%12;let i=0;s.forEach((x,j)=>{if(k>=(x-s[0]+12)%12)i=j});return i}
+const seasonRange=i=>{const s=S.seasons,a=s[i],b=(s[(i+1)%4]+10)%12+1;return a===b?`${a}월`:`${a}-${b}월`};
 const standalone=()=>{try{return matchMedia('(display-mode: standalone)').matches||navigator.standalone===true}catch(e){return false}};
 
 /* ---------- 화면 조각 ---------- */
-const tag=p=>`<span class="tg">${LI[p.loc]||'📍'} ${esc(p.loc)}</span>`;
-const sec=(g,row)=>g.map(([l,a])=>`<section><h2>${LI[l]||'📍'} ${esc(l)}<i>${a.length}</i></h2>${a.map(row).join('')}</section>`).join('');
+const tag=p=>`<span class="tg">${ico(p.loc)} ${esc(p.loc)}</span>`;
+const sec=(g,row)=>g.map(([l,a])=>`<section><h2>${ico(l)} ${esc(l)}<i>${a.length}</i></h2>${a.map(row).join('')}</section>`).join('');
 const sub=p=>[p.cat,p.w?`물 ${p.w}일마다`:''].filter(Boolean).join(', ');
 const rT=p=>`<div class="row" data-open="${p.id}"><div class="nm"><b>${esc(p.name)}</b><small>${esc(p.cat)}</small></div><div class="act">${due(p,'w')?`<button class="b w" data-do="w" data-id="${p.id}">💧 ${txt(left(p,'w'))}</button>`:''}${due(p,'f')?`<button class="b f" data-do="f" data-id="${p.id}">🌱 ${txt(left(p,'f'))}</button>`:''}</div></div>`;
 const rA=p=>{const l=left(p,'w'),f=left(p,'f');return `<div class="row" data-open="${p.id}"><div class="nm"><div class="l1"><b>${esc(p.name)}</b>${tag(p)}</div><small>${esc(sub(p))}</small></div><div class="act">${f!==null&&f<=0?`<span class="pill sn">🌱 ${txt(f)}</span>`:''}${p.w?(l===null?'':`<span class="pill ${cls(l)}">💧 ${txt(l)}</span>`):'<span class="pill un">물주기 미정</span>'}</div></div>`};
@@ -227,7 +543,7 @@ return `<h3 class="uh">앞으로 줄 목록</h3><section class="flat">${h}</sect
 }
 function emptyAll(){
 if(mode==='loading')return `<div class="empty">식물을 불러오는 중이에요<br>🪴</div>`;
-if(!S.started)return `<div class="ok"><span>🪴</span><b>내 식물 관리에 오신 걸 환영해요</b><small>식물 기록은 이 기기에 저장돼요.<br>전에 받아 둔 백업 파일이 있으면 가져오세요.</small><div class="stack"><button class="b big sv" data-do="bk-imp">백업 파일 가져오기</button><button class="b big" data-do="start">빈 상태로 시작</button>${bip&&!standalone()?'<button class="b big" data-do="install">📲 홈 화면에 앱 설치</button>':''}</div></div>`;
+if(!S.started)return `<div class="ok"><span>🪴</span><b>내 식물 관리에 오신 걸 환영해요</b><small>식물 기록은 이 기기에 저장돼요.<br>전에 받아 둔 백업 파일이 있으면 가져오고,<br>다른 기기에서 드라이브를 연결해 썼다면 이어 쓰세요.</small><div class="stack"><button class="b big sv" data-do="bk-imp">백업 파일 가져오기</button>${pv()?'':'<button class="b big" data-do="dr-code">구글 드라이브에서 이어 쓰기</button>'}<button class="b big" data-do="start">빈 상태로 시작</button>${bip&&!standalone()?'<button class="b big" data-do="install">📲 홈 화면에 앱 설치</button>':''}</div></div>`;
 return `<div class="empty">아직 등록한 식물이 없어요.<br>＋ 추가로 첫 식물을 등록하거나, 설정에서 백업 파일을 가져오세요.<br><button class="b" data-tab="settings">설정 열기</button></div>`;
 }
 function vToday(){
@@ -244,9 +560,9 @@ return a.length?`<section class="flat">${a.map(rA).join('')}</section>`:(alive()
 }
 function vAll(){
 if(!P.length)return emptyAll();
-const A=alive(),cs=['전체',...locs()],cats=CATS.filter(c=>A.some(p=>p.cat===c)),g=gone().length;
-return `<div class="chips">${cs.map(c=>`<button class="ch${c===flt?' on':''}" data-flt="${esc(c)}">${c==='전체'?'':(LI[c]||'📍')+' '}${esc(c)} ${c==='전체'?A.length:A.filter(p=>p.loc===c).length}</button>`).join('')}</div>`+
-(cats.length?`<div class="chips">${cats.map(c=>`<button class="ch sm${c===cf?' on':''}" data-cf="${esc(c)}">${esc(c)} ${A.filter(p=>p.cat===c).length}</button>`).join('')}</div>`:'')+
+const A=alive(),cs=['전체',...locs()],cl=cats().filter(c=>A.some(p=>p.cat===c)),g=gone().length;
+return `<div class="chips">${cs.map(c=>`<button class="ch${c===flt?' on':''}" data-flt="${esc(c)}">${c==='전체'?'':ico(c)+' '}${esc(c)} ${c==='전체'?A.length:A.filter(p=>p.loc===c).length}</button>`).join('')}</div>`+
+(cl.length?`<div class="chips">${cl.map(c=>`<button class="ch sm${c===cf?' on':''}" data-cf="${esc(c)}">${esc(c)} ${A.filter(p=>p.cat===c).length}</button>`).join('')}</div>`:'')+
 `<input id="q" placeholder="이름, 학명, 별칭으로 찾기" value="${esc(q)}" autocomplete="off"><div id="list">${list()}</div>`+
 (g?`<button class="mc" data-tab="memorial"><span><b>🕊️ 기념관</b><small>함께했던 식물 ${g}</small></span><span class="mu">보기</span></button>`:'');
 }
@@ -257,20 +573,47 @@ return `<div class="vh"><button class="back" data-tab="all">← 식물</button><
 }
 function vSet(){
 const days=S.lastBackup?diff(today(),S.lastBackup):null;
-const where=pv()?'Claude 미리보기 화면이에요. 여기서 바꾼 내용은 폰 앱에 저장되지 않아요.':'이 기기에 저장하고 있어요. 구글 드라이브 자동 저장은 다음 단계에서 추가돼요. 그 전까지는 가끔 전체 백업을 받아 두세요.';
+const where=pv()?'Claude 미리보기 화면이에요. 여기서 바꾼 내용은 폰 앱에 저장되지 않아요.':linked()?'이 기기와 내 구글 드라이브에 함께 저장하고 있어요.':'이 기기에만 저장하고 있어요. 아래에서 구글 드라이브를 연결하면 자동으로 함께 저장돼요.';
 const prot=pv()?'':persisted===true?'<p class="mu">저장 공간 보호: 켜짐. 기기 저장 공간이 부족해져도 브라우저가 이 앱의 기록을 지우지 않아요.</p>':persisted===false?'<p class="mu">저장 공간 보호: 꺼짐. 홈 화면에 설치하면 켜질 수 있어요.</p>':'';
 const inst=standalone()?'<p class="mu">설치된 앱으로 열려 있어요.</p>':bip?'<div class="stack"><button class="b big sv" data-do="install">📲 홈 화면에 앱 설치</button></div>':'<p class="mu">Chrome 메뉴(⋮)에서 \'홈 화면에 추가\'나 \'앱 설치\'를 누르면 앱처럼 쓸 수 있어요.</p>';
 return `<div class="vh"><h2>⚙️ 설정</h2></div>
 <section class="set"><h3>저장</h3><p>${where}</p>${prot}<p class="mu">키우는 식물 ${alive().length}개, 기념관 ${gone().length}개</p></section>
+${vDrive()}
+<section class="set"><h3>백업 파일</h3><p class="mu">마지막으로 받은 날: ${S.lastBackup?`${fmtD(S.lastBackup)} (${days===0?'오늘':days+'일 전'})`:'아직 없어요'}</p>
+<div class="stack"><button class="b big${linked()?'':' sv'}" data-do="bk-json">전체 백업 받기 (JSON)</button><button class="b big" data-do="bk-csv">엑셀용으로 받기 (CSV)</button><button class="b big" data-do="bk-imp">백업 파일 가져오기</button></div>
+<p class="mu">전체 백업에는 기록, 케어팁, 기념관까지 모두 들어 있어요. 다른 앱으로 옮기거나 따로 오래 보관할 때 쓰세요. 엑셀용은 식물 목록만 한 줄씩 담아요.</p>
+<p class="mu">파일 이름에 받은 날짜와 시각이 붙어요. 기기에 받은 파일은 앱이 볼 수 없어서, 오래된 파일은 내 파일 앱에서 직접 지워 주세요.</p></section>
+${vList('loc')}${vList('cat')}${vSeason()}
 ${pv()?'':`<section class="set"><h3>앱 설치</h3>${inst}</section>`}
-<section class="set"><h3>백업</h3><p class="mu">마지막 백업: ${S.lastBackup?`${fmtD(S.lastBackup)} (${days===0?'오늘':days+'일 전'})`:'아직 없어요'}</p>
-<div class="stack"><button class="b big sv" data-do="bk-json">전체 백업 받기 (JSON)</button><button class="b big" data-do="bk-csv">엑셀용으로 받기 (CSV)</button><button class="b big" data-do="bk-imp">백업 파일 가져오기</button></div>
-<p class="mu">전체 백업에는 기록, 케어팁, 기념관까지 모두 들어 있어요. 폰을 바꾸거나 다른 앱으로 옮길 때 이 파일을 쓰세요. 엑셀용은 식물 목록만 한 줄씩 담아요.</p>
-<p class="mu">구글 드라이브 자동 저장은 다음 단계에서 이곳에 추가돼요.</p></section>
 <p class="ver">앱 버전 ${APP_VER}</p>`;
 }
+function vDrive(){
+const h='<h3>☁️ 구글 드라이브</h3>';
+if(pv())return `<section class="set">${h}<p>폰 앱에서 연결하면 바뀐 내용이 내 구글 드라이브에 자동으로 저장돼요.</p><p class="mu">Claude 미리보기에서는 연결할 수 없어요. 연결 안내만 볼 수 있어요.</p><div class="stack"><button class="b big" data-do="dr-setup">연결 안내 보기</button></div></section>`;
+if(!linked())return `<section class="set">${h}<p>연결하면 바뀐 내용이 몇 초 안에 내 구글 드라이브에 저장되고, PC나 새 폰에서도 이어 쓸 수 있어요. 하루 한 번 자동 사본도 남겨요.</p><div class="stack"><button class="b big sv" data-do="dr-setup">구글 드라이브 연결하기</button><button class="b big" data-do="dr-code">연결 코드로 연결</button></div><p class="mu">연결 코드는 이미 연결한 다른 기기의 설정에서 받을 수 있어요.</p></section>`;
+return `<section class="set">${h}<p id="sy-line">${syncLine()}</p><p class="mu">내 드라이브의 '내 식물 관리' 폴더에 my-plants.json으로 저장해요.</p>
+<div class="stack"><button class="b big sv" data-do="dr-now">지금 맞추기</button><button class="b big" data-do="dr-share">다른 기기 연결 코드</button></div>
+<h3>자동 사본</h3><p class="mu">하루 한 번, 그날 처음 바뀌기 전 상태를 '내 식물 관리/자동 사본' 폴더에 남겨요. 보관 개수가 넘으면 오래된 사본부터 드라이브 휴지통으로 가요(30일 뒤 완전 삭제).</p>
+<label for="keep">보관할 개수<select id="keep">${[3,5,7,14,30].map(n=>`<option value="${n}"${n===+S.snapKeep?' selected':''}>최근 ${n}개</option>`).join('')}</select></label>
+<div class="stack"><button class="b big" data-do="dr-snaps">사본 보기·되돌리기</button><button class="b big dl" data-do="dr-off">이 기기에서 연결 끊기</button></div></section>`;
+}
+function vList(k){
+const word=k==='loc'?'위치':'종류',a=k==='loc'?locs():cats(),n=v=>alive().filter(p=>p[k]===v).length;
+return `<section class="set"><h3>${word}</h3><p class="mu">이름을 누르면 바꾸거나 지울 수 있어요. 화살표로 순서를 바꿔요.</p>
+<div class="lst">${a.map((v,i)=>`<div class="li"><button class="nmb" data-do="li-open" data-k="${k}" data-v="${esc(v)}">${k==='loc'?ico(v)+' ':''}${esc(v)}<small>${n(v)}</small></button><button class="mv" data-do="li-mv" data-k="${k}" data-v="${esc(v)}" data-d="-1" aria-label="위로"${i?'':' disabled'}>▲</button><button class="mv" data-do="li-mv" data-k="${k}" data-v="${esc(v)}" data-d="1" aria-label="아래로"${i<a.length-1?'':' disabled'}>▼</button></div>`).join('')}</div>
+<div class="stack"><button class="b big" data-do="li-open" data-k="${k}">＋ ${word} 추가</button></div></section>`;
+}
+function vSeason(){
+const cur=seasonOf(new Date().getMonth()+1),r=S.rainy||S0().rainy;
+const mo=(id,v)=>`<select id="${id}" data-season>${Array.from({length:12},(_,i)=>`<option value="${i+1}"${i+1===+v?' selected':''}>${i+1}월</option>`).join('')}</select>`;
+const dy=(id,v)=>`<input id="${id}" type="number" inputmode="numeric" min="1" max="31" value="${+v}" data-season aria-label="일">`;
+return `<section class="set"><h3>계절</h3><p>지금은 ${SEASONS[cur][1]} ${SEASONS[cur][0]}(${seasonRange(cur)})이에요.</p>
+<div class="g2">${SEASONS.map(([n,e],i)=>`<label for="se${i}">${e} ${n} 시작${mo('se'+i,S.seasons[i])}</label>`).join('')}</div>
+<label>☔ 장마 기간</label><div class="rn"><span>시작</span>${mo('rf-m',r.from[0])}${dy('rf-d',r.from[1])}<span>일</span><span>끝</span>${mo('rt-m',r.to[0])}${dy('rt-d',r.to[1])}<span>일</span></div>
+<p class="mu">계절별 물주기와 장마철 단수 알림(Step 6), 계절마다 바뀌는 디자인(나중에)에 쓰는 기준이에요.</p></section>`;
+}
 function renderHead(){
-$('#date').textContent=new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});
+$('#date').textContent=new Date().toLocaleDateString('ko-KR',{month:'long',day:'numeric',weekday:'short'});paintSync();
 if(tab!=='all'&&tab!=='today'||!alive().length){$('#sum').innerHTML='';return}
 const A=alive(),nw=A.filter(stf.w).length,nf=A.filter(stf.f).length,dn=A.filter(stf.d).length,nu=A.filter(stf.u).length;
 $('#sum').innerHTML=`<button class="st w${st==='w'?' on':''}" data-st="w">💧 물 ${nw}</button><button class="st f${st==='f'?' on':''}" data-st="f">🌱 비료 ${nf}</button><button class="st${st==='d'?' on':''}" data-st="d">✅ 오늘 완료 ${dn}</button>${nu?`<button class="st u${st==='u'?' on':''}" data-st="u">⚪ 물주기 미정 ${nu}</button>`:''}`;
@@ -309,7 +652,7 @@ toast(`${k==='w'?'💧':'🌱'} ${p.name} ${k==='w'?'물 줬어요':'비료 줬�
 
 /* ---------- 시트 ---------- */
 function openSheet(html){$('#sh').innerHTML=html;if(!sheetOpen){sheetOpen=true;pushNav('sheet')}$('#ov').hidden=false;$('#sh').scrollTop=0}
-function closeSheet(fromPop){$('#ov').hidden=true;eid=null;pending=null;if(!sheetOpen)return;sheetOpen=false;if(!fromPop)popNav('sheet')}
+function closeSheet(fromPop){$('#ov').hidden=true;eid=null;pending=null;if(!sheetOpen)return;sheetOpen=false;if(!fromPop)popNav('sheet');if(remoteDirty){remoteDirty=false;render()}}
 const opt=(arr,v,blank)=>(blank!=null?`<option value="">${blank}</option>`:'')+arr.map(x=>`<option${x===v?' selected':''}>${esc(x)}</option>`).join('');
 function logsHtml(p){const L=p.logs.map((l,i)=>({l,i})).reverse();return L.length?`<ul class="logs">${L.map(({l,i})=>`<li><time>${esc(fmtD(l.d))}</time><p>${esc(l.t)}</p><button class="lx" data-do="logdel" data-i="${i}">지우기</button></li>`).join('')}</ul>`:'<p class="hint">아직 기록이 없어요.</p>'}
 function noteHtml(n){return `<div class="note">${n.tips?`<p>${esc(n.tips)}</p>`:''}${(n.logs||[]).map(l=>`<p><span class="mu">${esc(fmtD(l.d))}</span> ${esc(l.t)}</p>`).join('')}${n.text?`<p>${esc(n.text)}</p>`:''}</div>`}
@@ -321,8 +664,8 @@ openSheet(`<div class="shh"><h3>${isNew?'새 식물':esc(p.name)}</h3><button cl
 ${p.sci||p.alias?`<p class="sci">${esc([p.sci,p.alias].filter(Boolean).join(', '))}</p>`:''}
 ${!isNew&&p.status==='alive'?`<div class="g2 qa"><button class="b w big" data-do="w2">💧 물 줌</button><button class="b f big" data-do="f2">🌱 비료 줌</button></div>`:''}
 <label for="fn">이름</label><input id="fn" value="${esc(p.name)}" placeholder="예: 파키포디움 그락실리우스">
-<label>위치</label><div class="chips" id="lc">${locs().map(l=>`<button class="ch${l===sel?' on':''}" data-loc="${esc(l)}">${LI[l]||'📍'} ${esc(l)}</button>`).join('')}</div>
-<div class="g2"><label for="fc">종류<select id="fc">${opt(CATS,p.cat,'')}</select></label><label for="fg">생육형<select id="fg">${opt(GROWTH,p.growth,'모름')}</select></label></div>
+<label>위치</label><div class="chips" id="lc">${locs().map(l=>`<button class="ch${l===sel?' on':''}" data-loc="${esc(l)}">${ico(l)} ${esc(l)}</button>`).join('')}</div>
+<div class="g2"><label for="fc">종류<select id="fc">${opt(catsFor(p.cat),p.cat,'')}</select></label><label for="fg">생육형<select id="fg">${opt(GROWTH,p.growth,'모름')}</select></label></div>
 <fieldset class="grp"><legend>물주기와 비료</legend>
 <div class="g2"><label for="fw">물주기 (일)<input id="fw" type="number" inputmode="numeric" min="1" value="${p.w||''}" placeholder="비우면 미정"></label><label for="fl">마지막 물 준 날<input id="fl" type="date" value="${p.lw||''}"></label></div>
 ${p.wn?`<p class="hint">메모 기준: ${esc(p.wn)}</p>`:''}${p.lw?'':'<p class="hint">마지막 물 준 날을 비워 두면 오늘부터 세요.</p>'}
@@ -388,7 +731,7 @@ try{file=new File([blob],filename,{type:mime});share=!!(navigator.canShare&&navi
 openSheet(`<div class="shh"><h3>${isBackup?'전체 백업':'엑셀용 목록'}</h3><button class="x" data-do="close" aria-label="닫기">×</button></div>
 <p class="cf">${esc(filename)}<br><span class="mu">${Math.max(1,Math.round(blob.size/1024))}KB</span></p>
 <div class="stack"><button class="b big sv" data-do="file-dl">기기에 저장 (다운로드 폴더)</button>${share?'<button class="b big" data-do="file-share">공유 (드라이브, 카톡 등)</button>':''}</div>
-${isBackup?'<p class="hint">드라이브에 올리려면 저장한 뒤 내 파일 앱에서 공유하세요. 자동 저장은 다음 단계에서 추가돼요.</p>':''}`);
+${isBackup?`<p class="hint">${linked()?'드라이브에는 자동으로 저장되고 있어요. 이 파일은 따로 보관하거나 다른 앱으로 옮길 때 쓰세요.':'드라이브에 자동으로 저장하려면 설정에서 구글 드라이브를 연결하세요.'}</p>`:''}`);
 pending={file:{filename,blob,file,isBackup}};
 }
 function fileDownload(){
@@ -407,22 +750,174 @@ const r=new FileReader();
 r.onload=()=>{let o;try{o=JSON.parse(String(r.result).replace(/^﻿/,''))}catch(e){toast('JSON 백업 파일이 아니에요');return}
 const d=fromBackup(o);
 if(!d){toast('이 파일에서 식물 목록을 찾지 못했어요');return}
-const na=d.plants.filter(p=>p.status==='alive').length;
-openSheet(`<div class="shh"><h3>백업 가져오기</h3><button class="x" data-do="close" aria-label="닫기">×</button></div><p class="cf">이 파일에는 식물 ${d.plants.length}개가 있어요 (키우는 식물 ${na}개, 기념관 ${d.plants.length-na}개).</p>${P.length?`<p class="cf">가져오면 지금 있는 식물 ${P.length}개가 이 파일 내용으로 바뀌어요. 먼저 지금 상태를 백업해 두면 안전해요.</p>`:''}<div class="btns"><button class="b big sv" data-do="imp-ok">가져오기</button><button class="b big" data-do="close">닫기</button></div>`);
-pending=d;
+confirmImport(d,'import');
 };
 r.onerror=()=>toast('파일을 읽지 못했어요');
 r.readAsText(file);
+}
+/* 백업 파일 가져오기와 자동 사본으로 되돌리기가 같은 확인 화면을 써요 */
+function confirmImport(d,why,label){
+const na=d.plants.filter(p=>p.status==='alive').length,rs=why==='restore';
+openSheet(`<div class="shh"><h3>${rs?'사본으로 되돌리기':'백업 가져오기'}</h3><button class="x" data-do="close" aria-label="닫기">×</button></div><p class="cf">${label?esc(label)+' 사본에는':'이 파일에는'} 식물 ${d.plants.length}개가 있어요 (키우는 식물 ${na}개, 기념관 ${d.plants.length-na}개).</p>${P.length?`<p class="cf">${rs?'되돌리면':'가져오면'} 지금 있는 식물 ${P.length}개가 이 내용으로 바뀌어요. ${linked()?'바꾸기 전 상태는 드라이브에 사본으로 하나 남겨 둘게요.':'먼저 지금 상태를 백업해 두면 안전해요.'}</p>`:''}<div class="btns"><button class="b big sv" data-do="imp-ok">${rs?'되돌리기':'가져오기'}</button><button class="b big" data-do="close">닫기</button></div>`);
+pending=Object.assign(d,{why});
 }
 function applyImport(){
 const d=pending;if(!d||!d.plants)return;
 const keep=new Set(d.plants.map(p=>p.id)),now=Date.now(),removed=P.filter(p=>!keep.has(p.id)).map(p=>p.id);
 loadData(d);removed.forEach(id=>{D[id]=now});
-S.started=true;S.updated=now;commit();askPersist();
+/* 가져온 내용이 가장 최근 것이 되도록 시각을 새로 찍어요. 그래야 다른 기기와 맞출 때 이 내용이 남아요 */
+P.forEach(p=>{p.updated=now;p.restored=now});
+S.started=true;S.updated=now;
+if(linked()){SY.replace=d.why==='restore'?'restore':'import';saveSync()}
+commit();askPersist();
 const wasTab=tab!=='all';
-$('#ov').hidden=true;pending=null;eid=null;
+$('#ov').hidden=true;pending=null;eid=null;remoteDirty=false;
 if(sheetOpen){sheetOpen=false;if(!pv())try{if(history.state&&history.state.nav==='sheet'){skipPop++;history.go(wasTab?-2:-1)}}catch(e){}}
-flt='전체';cf='';st='';q='';tab='all';render();scrollTo(0,0);toast(`식물 ${P.length}개를 가져왔어요`);
+flt='전체';cf='';st='';q='';tab='all';render();scrollTo(0,0);toast(d.why==='restore'?`사본으로 되돌렸어요. 식물 ${P.length}개`:`식물 ${P.length}개를 가져왔어요`);
+}
+
+/* ---------- 구글 드라이브 연결 화면 ---------- */
+function copyText(t,msg,fallback){
+const no=()=>{toast('복사하지 못했어요. 글자를 길게 눌러 복사해 주세요');if(fallback)fallback()};
+try{if(navigator.clipboard&&window.isSecureContext)navigator.clipboard.writeText(t).then(()=>toast(msg||'복사했어요'),no);else no()}catch(e){no()}
+}
+function setupSheet(){
+const key=pendingKey();
+openSheet(`<div class="shh"><h3>구글 드라이브 연결</h3><button class="x" data-do="close" aria-label="닫기">×</button></div>
+<p class="cf">처음 한 번만 하면 돼요. 내 구글 계정에 작은 프로그램(Apps Script)을 만들고, 앱은 그걸 거쳐 드라이브에 저장해요. 2-5단계는 PC에서 하는 게 편해요.</p>
+<ol class="steps">
+<li><b>코드 복사</b><span>코드 안의 열쇠가 이 기기와 짝이 돼요. 이 화면을 연 기기에서 5단계까지 마쳐 주세요.</span><button class="b big sv" data-do="dr-copy">코드 복사</button></li>
+<li><b>스크립트 만들기</b><span>script.google.com → 새 프로젝트. 원래 있던 코드를 모두 지우고 붙여 넣은 뒤 💾 저장해요. 프로젝트 이름은 '내 식물 동기화'처럼 아무거나 괜찮아요.</span></li>
+<li><b>배포</b><span>오른쪽 위 배포(Deploy) → 새 배포(New deployment) → 유형 선택 ⚙️ → 웹 앱(Web app). 실행 계정은 나(Me), 액세스 권한은 모든 사용자(Anyone)로 두고 배포해요.</span></li>
+<li><b>권한 허용</b><span>액세스 승인 → 내 계정 선택. 'Google에서 확인하지 않은 앱' 화면이 나오면 고급 → '(안전하지 않음)으로 이동' → 허용. 내가 만든 스크립트라서 나오는 안내예요.</span></li>
+<li><b>주소 붙여넣기</b><span>배포가 끝나면 나오는 웹 앱 URL(…/exec로 끝나요)을 복사해 아래에 붙여 넣어요.</span></li>
+</ol>
+<label for="dr-url">웹 앱 URL</label><input id="dr-url" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" spellcheck="false">
+<p id="dr-msg" class="hint" hidden></p>
+<div class="btns"><button class="b big sv" data-do="dr-go"${pv()?' disabled':''}>연결</button><button class="b big" data-do="close">닫기</button></div>
+${pv()?'<p class="hint">Claude 미리보기에서는 연결 버튼이 꺼져 있어요.</p>':''}
+<details class="grp" id="dr-src"><summary>복사할 코드 보기</summary><pre class="raw">${esc(gsCode(key))}</pre></details>`);
+}
+function codeSheet(){
+openSheet(`<div class="shh"><h3>연결 코드로 연결</h3><button class="x" data-do="close" aria-label="닫기">×</button></div>
+<p class="cf">이미 드라이브를 연결한 기기의 설정 → 구글 드라이브 → '다른 기기 연결 코드'에서 코드를 복사해 붙여 넣으세요. 이 기기의 기록과 드라이브의 기록을 합쳐요.</p>
+<label for="dr-url">연결 코드</label><textarea id="dr-url" rows="3" placeholder="pc1.로 시작하는 코드" autocomplete="off" spellcheck="false"></textarea>
+<p id="dr-msg" class="hint" hidden></p>
+<div class="btns"><button class="b big sv" data-do="dr-go">연결</button><button class="b big" data-do="close">닫기</button></div>`);
+}
+function shareSheet(){
+openSheet(`<div class="shh"><h3>다른 기기 연결 코드</h3><button class="x" data-do="close" aria-label="닫기">×</button></div>
+<p class="cf">새 폰이나 PC에서 앱을 열고 설정 → 구글 드라이브 → '연결 코드로 연결'에 붙여 넣으세요. 링크를 보내 그 기기에서 열어도 돼요.</p>
+<textarea class="code" rows="3" readonly>${esc(connCode())}</textarea>
+<div class="stack"><button class="b big sv" data-do="dr-cc">코드 복사</button><button class="b big" data-do="dr-cl">연결 링크 복사</button></div>
+<p class="hint">이 코드가 있으면 내 식물 기록을 읽고 고칠 수 있어요. 카톡 나에게 보내기처럼 나만 보는 곳에 보관하세요.</p>`);
+}
+function showMsg(m){const e=$('#dr-msg');if(e){e.hidden=false;e.textContent=m}else toast(m)}
+async function connect(c){
+const btn=document.querySelector('[data-do="dr-go"],[data-do="dr-link"]');
+if(btn){btn.disabled=true;btn.textContent='연결하는 중…'}
+try{
+const r=await call({a:'ping'},c);
+if(!r.ok)throw fail(r.err||'server');
+SY={url:c.url,key:c.key,rev:'',dirty:false,last:0,err:null,replace:null};saveSync();
+try{localStorage.removeItem(PKEY)}catch(e){}
+closeSheet();if(tab!=='settings')setTab('settings');else render();
+toast('구글 드라이브에 연결했어요');
+sync();
+}catch(e){
+if(btn){btn.disabled=false;btn.textContent='연결'}
+showMsg(e.code==='key'?'열쇠가 맞지 않아요. 이 기기의 연결 화면에서 복사한 코드를 붙여 넣고 배포했는지 확인해 주세요. 코드를 고쳤다면 배포 관리에서 새 버전으로 다시 배포해야 해요.':e.code==='off'?'인터넷 연결을 확인해 주세요.':'연결하지 못했어요. 배포할 때 액세스 권한을 \'모든 사용자\'로 했는지, URL이 /exec로 끝나는지 확인해 주세요.');
+}
+}
+function goConnect(){
+const raw=v('dr-url');if(!raw){$('#dr-url').focus();return}
+const c=parseConn(raw);
+if(!c){showMsg(/\/dev$/.test(raw.split('?')[0])?'테스트용 주소(/dev)예요. 배포 → 배포 관리에서 /exec로 끝나는 웹 앱 URL을 복사해 주세요.':raw.startsWith('pc1.')?'연결 코드가 잘렸거나 바뀌었어요. 다시 복사해 주세요.':'웹 앱 URL이나 연결 코드가 아니에요. https://script.google.com/…/exec 형태인지 확인해 주세요.');return}
+connect(c);
+}
+function disconnect(){SY={};saveSync();setSync('');render();toast('이 기기에서 연결을 끊었어요. 드라이브 파일은 그대로 있어요')}
+const kb=n=>Math.max(1,Math.round((n||0)/1024))+'KB';
+function snapLabel(x){
+const m=/my-plants-(\d{4})-(\d\d)-(\d\d)(?:-(\d\d)(\d\d)\d\d-(.+))?\.json$/.exec(x.name||'');
+if(!m)return x.name;
+const d=new Date(+m[1],+m[2]-1,+m[3]),dd=`${+m[2]}월 ${+m[3]}일 (${'일월화수목금토'[d.getDay()]})`;
+return m[4]?`${dd} ${m[4]}:${m[5]} ${m[6].replace(/전$/,' 전')}`:`${dd} 시작 시점`;
+}
+async function snapsSheet(){
+openSheet(`<div class="shh"><h3>자동 사본</h3><button class="x" data-do="close" aria-label="닫기">×</button></div><p class="cf mu">드라이브에서 사본 목록을 불러오는 중이에요…</p>`);
+try{
+const r=await call({a:'list',keep:S.snapKeep});if(!r.ok)throw fail(r.err||'server');
+if(!sheetOpen)return;
+const a=r.snaps||[];
+$('#sh').innerHTML=`<div class="shh"><h3>자동 사본</h3><button class="x" data-do="close" aria-label="닫기">×</button></div><p class="cf">'시작 시점'은 그날 처음 바뀌기 전 상태예요. 되돌려도 바꾸기 전 상태를 사본으로 하나 더 남겨요.</p>`+
+(a.length?`<div class="lst">${a.map(x=>`<div class="li"><div class="nmb st2">${esc(snapLabel(x))}<small>${kb(x.size)}</small></div><button class="b" data-do="dr-pick" data-id="${esc(x.id)}" data-n="${esc(snapLabel(x))}">되돌리기</button></div>`).join('')}</div>`:'<p class="hint">아직 사본이 없어요. 내일부터 바뀐 날마다 하나씩 생겨요.</p>');
+}catch(e){if(sheetOpen)$('#sh').innerHTML=`<div class="shh"><h3>자동 사본</h3><button class="x" data-do="close" aria-label="닫기">×</button></div><p class="hint">${esc(errText(e.code))}</p>`}
+}
+async function pickSnap(id,label){
+toast('사본을 불러오는 중이에요');
+try{const r=await call({a:'snap',id});if(!r.ok)throw fail(r.err||'server');const d=fromBackup(r.data);if(!d)throw fail('server');confirmImport(d,'restore',label)}
+catch(e){toast(errText(e.code))}
+}
+/* 연결 링크(#connect=…)로 열었을 때 */
+function checkHash(){
+if(pv()||!(location.hash||'').startsWith('#connect='))return;
+const c=parseConn(location.hash);
+try{history.replaceState(history.state,'',location.pathname+location.search)}catch(e){}
+if(!c){toast('연결 링크가 올바르지 않아요');return}
+if(linked()&&SY.url===c.url&&SY.key===c.key){toast('이미 연결되어 있어요');return}
+openSheet(`<div class="shh"><h3>구글 드라이브 연결</h3><button class="x" data-do="close" aria-label="닫기">×</button></div><p class="cf">이 기기를 구글 드라이브에 연결할까요? 이 기기의 기록과 드라이브의 기록을 합쳐요.</p><p id="dr-msg" class="hint" hidden></p><div class="btns"><button class="b big sv" data-do="dr-link">연결</button><button class="b big" data-do="close">닫기</button></div>`);
+pending={conn:c};
+}
+
+/* ---------- 위치·종류 고치기 ---------- */
+function listSheet(k,val){
+const isNew=val==null,word=k==='loc'?'위치':'종류',used=isNew?0:P.filter(p=>p[k]===val).length;
+openSheet(`<div class="shh"><h3>${isNew?`새 ${word}`:esc(val)}</h3><button class="x" data-do="close" aria-label="닫기">×</button></div>
+<label for="li-n">이름</label><input id="li-n" value="${esc(val||'')}" autocomplete="off">
+${k==='loc'?`<label>아이콘</label><div class="chips wrap" id="li-ic">${ICONS.map(i=>`<button class="ch${i===ico(val||'')?' on':''}" data-ic="${i}">${i}</button>`).join('')}</div>`:''}
+${used?`<p class="hint">이 ${word}의 식물 ${used}개도 함께 바뀌어요.</p>`:''}
+<div class="btns"><button class="b big sv" data-do="li-save">저장</button>${isNew?'<button class="b big" data-do="close">닫기</button>':'<button class="b big dl" data-do="li-del">삭제</button>'}</div>`);
+pending={list:{k,v:isNew?null:val,icon:k==='loc'?ico(val||''):''}};
+}
+function saveList(){
+const L=pending&&pending.list;if(!L)return;
+const n=v('li-n').replace(/\s+/g,' '),word=L.k==='loc'?'위치':'종류';
+if(!n){$('#li-n').focus();toast('이름을 적어 주세요');return}
+const a=L.k==='loc'?S.locs:S.cats,all=L.k==='loc'?locs():cats();
+if(n!==L.v&&all.includes(n)){toast(`이미 있는 ${word}예요`);return}
+if(L.v==null)a.push(n);
+else if(n!==L.v){
+const i=a.indexOf(L.v);if(i>=0)a[i]=n;else a.push(n);
+const now=Date.now();P.forEach(p=>{if(p[L.k]===L.v){p[L.k]=n;p.updated=now}});
+if(L.k==='loc'){if(flt===L.v)flt=n;if(S.icons[L.v]){S.icons[n]=S.icons[L.v];delete S.icons[L.v]}}else if(cf===L.v)cf=n;
+}
+if(L.k==='loc'){S.icons=Object.assign({},S.icons);if(L.icon&&L.icon!==(LI[n]||'📍'))S.icons[n]=L.icon;else delete S.icons[n]}
+putSettings();closeSheet();render();toast('저장했어요');
+}
+function delList(btn){
+const L=pending&&pending.list;if(!L||L.v==null)return;
+const word=L.k==='loc'?'위치':'종류',ua=alive().filter(p=>p[L.k]===L.v).length;
+if(ua){toast(`이 ${word}에 키우는 식물이 ${ua}개 있어요. 식물의 ${word}를 먼저 바꿔 주세요`);return}
+const a=L.k==='loc'?S.locs:S.cats;
+if(L.k==='loc'&&a.filter(x=>x!==L.v).length<1){toast('위치는 하나 이상 있어야 해요');return}
+if(armed!==btn){armed=btn;btn.textContent='정말 지울까요?';return}
+const i=a.indexOf(L.v);if(i>=0)a.splice(i,1);
+if(L.k==='loc'){delete S.icons[L.v];if(flt===L.v)flt='전체'}else if(cf===L.v)cf='';
+putSettings();closeSheet();render();toast('지웠어요');
+}
+function moveList(k,val,d){
+const a=k==='loc'?S.locs:S.cats;
+(k==='loc'?locs():cats()).forEach(x=>{if(!a.includes(x))a.push(x)});
+const i=a.indexOf(val),j=i+d;if(i<0||j<0||j>=a.length)return;
+[a[i],a[j]]=[a[j],a[i]];putSettings();render();
+}
+function saveSeason(){
+const s=[0,1,2,3].map(i=>+$('#se'+i).value),o=s.map(x=>(x-s[0]+12)%12);
+if(!(o[1]>0&&o[2]>o[1]&&o[3]>o[2])){toast('봄, 여름, 가을, 겨울 순서가 되게 골라 주세요');render();return}
+const cl=(m,d)=>Math.max(1,Math.min(new Date(2024,m,0).getDate(),Math.round(d)||1));
+const fm=+$('#rf-m').value,tm=+$('#rt-m').value;
+S.seasons=s;S.rainy={from:[fm,cl(fm,+$('#rf-d').value)],to:[tm,cl(tm,+$('#rt-d').value)]};
+putSettings();render();toast('계절 설정을 저장했어요');
 }
 function install(){if(!bip)return;const e=bip;bip=null;e.prompt();e.userChoice.then(()=>render()).catch(()=>render())}
 
@@ -442,14 +937,31 @@ else if(a==='close')closeSheet();
 else if(a==='go-u'){st='u';setTab('all')}
 else if(a==='start'){S.started=true;putSettings();render()}
 else if(a==='install')install();
-else if(a==='bk-json')saveFile(`my-plants-backup-${today()}.json`,JSON.stringify(backupData(),null,1),'application/json',true);
-else if(a==='bk-csv')saveFile(`my-plants-list-${today()}.csv`,csv(),'text/csv',false);
+else if(a==='bk-json')saveFile(`my-plants-backup-${stamp()}.json`,JSON.stringify(backupData(),null,1),'application/json',true);
+else if(a==='bk-csv')saveFile(`my-plants-list-${stamp()}.csv`,csv(),'text/csv',false);
 else if(a==='file-dl')fileDownload();
 else if(a==='file-share')fileShare();
 else if(a==='bk-imp'){$('#imp').value='';$('#imp').click()}
 else if(a==='imp-ok')applyImport();
+else if(a==='dr-setup')setupSheet();
+else if(a==='dr-code')codeSheet();
+else if(a==='dr-copy')copyText(gsCode(pendingKey()),'코드를 복사했어요. Apps Script에 붙여 넣으세요',()=>{const d=$('#dr-src');if(d)d.open=true});
+else if(a==='dr-go')goConnect();
+else if(a==='dr-link'){const c=pending&&pending.conn;if(c)connect(c)}
+else if(a==='dr-now'){if(syncBusy)toast('지금 맞추는 중이에요');else sync()}
+else if(a==='dr-share')shareSheet();
+else if(a==='dr-cc')copyText(connCode(),'연결 코드를 복사했어요');
+else if(a==='dr-cl')copyText(connLink(),'연결 링크를 복사했어요');
+else if(a==='dr-off'){if(armed!==b){armed=b;b.textContent='정말 끊을까요? (드라이브 파일은 남아요)';return}armed=null;disconnect()}
+else if(a==='dr-snaps')snapsSheet();
+else if(a==='dr-pick')pickSnap(b.dataset.id,b.dataset.n);
+else if(a==='li-open')listSheet(b.dataset.k,b.dataset.v==null?null:b.dataset.v);
+else if(a==='li-mv')moveList(b.dataset.k,b.dataset.v,+b.dataset.d);
+else if(a==='li-save')saveList();
+else if(a==='li-del')delList(b);
 else if(a==='copy'){const d=pending&&pending.copy;if(d&&navigator.clipboard)navigator.clipboard.writeText(d).then(()=>toast('복사했어요'),()=>toast('복사하지 못했어요. 내용을 길게 눌러 복사해 주세요'))}
 return}
+b=t.closest('[data-ic]');if(b&&pending&&pending.list){pending.list.icon=b.dataset.ic;document.querySelectorAll('#li-ic .ch').forEach(x=>x.classList.toggle('on',x===b));return}
 b=t.closest('[data-loc]');if(b){sel=b.dataset.loc;document.querySelectorAll('#lc .ch').forEach(x=>x.classList.toggle('on',x===b));return}
 b=t.closest('[data-flt]');if(b){flt=b.dataset.flt;render();return}
 b=t.closest('[data-cf]');if(b){cf=cf===b.dataset.cf?'':b.dataset.cf;render();return}
@@ -462,9 +974,18 @@ if(t.id==='ov')closeSheet();
 document.addEventListener('input',e=>{if(e.target.id==='q'){q=e.target.value;$('#list').innerHTML=list()}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&sheetOpen)closeSheet()});
 $('#imp').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(f)readImport(f)});
-document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!sheetOpen)refresh()});
+document.addEventListener('change',e=>{const t=e.target;if(t.id==='keep'){S.snapKeep=+t.value;putSettings();toast(`자동 사본을 최근 ${S.snapKeep}개까지 보관해요`)}else if(t.dataset&&t.dataset.season!==undefined)saveSeason()});
+document.addEventListener('visibilitychange',()=>{
+if(document.hidden){if(linked()&&(SY.dirty||SY.replace))sync();return}
+if(!sheetOpen)refresh();
+if(linked()&&(SY.dirty||SY.replace||Date.now()-(SY.last||0)>20000))sync();
+});
+window.addEventListener('online',()=>{if(linked())sync()});
+window.addEventListener('offline',()=>{if(linked()&&!syncBusy)setSync('off')});
+/* 앱을 켜 둔 채로 있으면 5분마다 다른 기기에서 바뀐 게 있는지 봐요 */
+setInterval(()=>{if(linked()&&!document.hidden&&!syncBusy&&Date.now()-(SY.last||0)>300000)sync()},60000);
 /* 같은 기기에서 앱과 브라우저 탭을 같이 열어 둔 경우 */
-window.addEventListener('storage',e=>{if(e.key===LKEY&&!sheetOpen){loadLocal();refresh()}});
+window.addEventListener('storage',e=>{if(e.key===LKEY&&!sheetOpen){loadLocal();refresh()}else if(e.key===SKEY){SY=loadSync();paintSync()}});
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();bip=e;if(tab==='settings'||!S.started)render()});
 window.addEventListener('appinstalled',()=>{bip=null;toast('홈 화면에 설치했어요');render()});
 
